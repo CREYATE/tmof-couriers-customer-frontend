@@ -119,4 +119,27 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* TMOF custom color classes */
+  .bg-tmof-yellow {
+    background-color: #ffd215 !important;
+  }
+  .hover\:bg-tmof-yellow\/90:hover {
+    background-color: #e6bd13 !important;
+  }
+  .bg-tmof-red {
+    background-color: #E51E2A !important;
+  }
+  .hover\:bg-tmof-red\/90:hover {
+    background-color: #c71e2a !important;
+  }
+  .bg-tmof-darkblue {
+    background-color: #0C0E29 !important;
+  }
+  .text-tmof-yellow {
+    color: #ffd215 !important;
+  }
+  .text-tmof-red {
+    color: #E51E2A !important;
+  }
 }

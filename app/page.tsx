@@ -14,11 +14,11 @@ export default function LandingPage() {
   return (
     <div>
       <HeroSection />
-      <CourierAnimation3D />
+      {/* <CourierAnimation3D /> */}
       <AboutSection />
       <ServicesSection />
       <StatsSection />
-      <PortalsSection />
+      {/* <PortalsSection /> */}
       <CTASection />
     </div>
   );

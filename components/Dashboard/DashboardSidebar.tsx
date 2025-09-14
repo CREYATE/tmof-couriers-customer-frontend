@@ -18,7 +18,7 @@ export default function DashboardSidebar({ activeTab, setActiveTab }: { activeTa
           <button
             key={item.tab}
             onClick={() => setActiveTab(item.tab)}
-            className={`block w-full text-left font-medium rounded-lg px-4 py-2 transition-all text-gray-900 hover:text-[#ffd215] hover:bg-gray-200 ${activeTab === item.tab ? 'bg-[#ffd215] text-black' : ''}`}
+            className={`block w-full text-left font-medium rounded-lg px-4 py-2 transition-all text-[#0C0E29] hover:text-[#ffd215] hover:bg-[#0C0E29]/10 ${activeTab === item.tab ? 'bg-[#ffd215] text-black' : ''}`}
           >
             {item.label}
           </button>

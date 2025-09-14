@@ -8,7 +8,7 @@ export default function DashboardHeader({ onNotificationClick }: { onNotificatio
   // Example user initials, replace with actual user data as needed
   const userInitials = "JD";
   return (
-    <header className="px-6 py-4 border-b border-gray-200 bg-[#ffd215] text-black flex items-center justify-between">
+        <header className="px-6 py-4 border-b border-[#0C0E29] bg-[#ffd215] text-black flex items-center justify-between">
       <div className="flex items-center gap-3">
         <Image src="/tmof logo.png" alt="Logo" width={36} height={36} className="rounded-full" />
         <span className="font-bold text-xl">Dashboard</span>

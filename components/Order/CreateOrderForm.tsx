@@ -33,7 +33,7 @@ export default function CreateOrderForm() {
   }
 
   return (
-    <div className="max-w-xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+  <div className="max-w-xl mx-auto bg-[#0C0E29]/5 p-8 rounded-lg shadow-lg">
       {step === 1 && (
         <StepPickupDelivery
           pickup={pickup}
@@ -80,7 +80,7 @@ export default function CreateOrderForm() {
       )}
       {showLoader && (
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="loader mb-4" style={{ width: 40, height: 40, border: '4px solid #ffd215', borderRadius: '50%', borderTop: '4px solid #fff', animation: 'spin 1s linear infinite' }}></div>
+          <div className="loader mb-4" style={{ width: 40, height: 40, border: '4px solid #ffd215', borderRadius: '50%', borderTop: '4px solid #0C0E29', animation: 'spin 1s linear infinite' }}></div>
           <div className="text-lg font-bold text-[#ffd215]">Redirecting to payment gateway...</div>
         </div>
       )}

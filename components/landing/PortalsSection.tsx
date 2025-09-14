@@ -13,7 +13,7 @@ const PortalsSection = () => {
       icon: <User className="h-8 w-8 text-primary" />,
       link: "/auth?type=customer",
       buttonText: "Book Courier",
-      buttonClass: "w-full bg-[#ffd215] hover:bg-[#e6bd13] text-black font-medium"
+  buttonClass: "w-full tmof-btn"
     },
     {
       title: "Driver Portal", 
@@ -21,7 +21,7 @@ const PortalsSection = () => {
       icon: <Truck className="h-8 w-8 text-primary" />,
       link: "/auth?type=driver",
       buttonText: "Driver Login",
-      buttonClass: "w-full bg-[#0C0E29] hover:bg-[#1A1F45] text-white font-medium"
+  buttonClass: "w-full tmof-navbar"
     },
     {
       title: "Admin Portal",
@@ -29,7 +29,7 @@ const PortalsSection = () => {
       icon: <Shield className="h-8 w-8 text-primary" />,
       link: "/auth?type=admin",
       buttonText: "Admin Login",
-      buttonClass: "w-full bg-[#E51E2A] hover:bg-[#c71e2a] text-white font-medium"
+  buttonClass: "w-full tmof-accent text-white font-medium"
     },
     {
       title: "Manager Portal",
