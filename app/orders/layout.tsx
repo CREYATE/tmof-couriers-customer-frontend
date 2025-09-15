@@ -2,12 +2,14 @@
 
 import DashboardSidebar from '@/components/Dashboard/DashboardSidebar';
 import DashboardHeader from '@/components/Dashboard/DashboardHeader';
+import Notifications from '@/components/Dashboard/Notifications';
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 export default function OrdersLayout({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('orders');
+  const [showNotifications, setShowNotifications] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -24,7 +26,8 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <DashboardHeader />
+      <DashboardHeader onNotificationClick={() => setShowNotifications(true)} />
+      <Notifications show={showNotifications} onClose={() => setShowNotifications(false)} />
       <div className="flex flex-col md:flex-row flex-1">
         <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         <main className="flex-1 p-6">

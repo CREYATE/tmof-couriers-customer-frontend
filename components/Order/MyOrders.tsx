@@ -151,7 +151,17 @@ const MyOrders: React.FC = () => {
       <TmofSpinner show={loadingTrack || loadingTab || showSuccess} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold tracking-tight">My Orders</h1>
-        <Button type="button" onClick={() => router.push('/orders/create/order-type')} className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2">
+        <Button
+          type="button"
+          onClick={() => {
+            setShowSuccess(true);
+            setTimeout(() => {
+              setShowSuccess(false);
+              router.push('/orders/create/order-type');
+            }, 1200);
+          }}
+          className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2"
+        >
           <Package className="h-5 w-5 text-black" />
           Create New Order
         </Button>
@@ -231,8 +241,15 @@ const MyOrders: React.FC = () => {
           )}
           {/* Order Details Modal */}
           {showOrderModal && selectedOrder && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="bg-[#0C0E29] rounded-lg shadow-lg w-full max-w-md p-8 relative">
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
+              onClick={handleCloseModal}
+            >
+              <div
+                className="bg-[#0C0E29] rounded-lg shadow-lg w-full max-w-md p-8 relative"
+                style={{ backgroundColor: '#0C0E29', opacity: 1 }}
+                onClick={e => e.stopPropagation()}
+              >
                 <button className="absolute top-3 right-3 text-gray-400 hover:text-white" onClick={handleCloseModal}>
                   &times;
                 </button>
