@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import TmofSpinner from '@/components/ui/TmofSpinner';
 import StepPickupDelivery from './StepPickupDelivery';
 import StepPackageService from './StepPackageService';
 import StepPricingQuote from './StepPricingQuote';
@@ -33,7 +34,8 @@ export default function CreateOrderForm() {
   }
 
   return (
-  <div className="max-w-xl mx-auto bg-[#0C0E29]/5 p-8 rounded-lg shadow-lg">
+    <div className="max-w-xl mx-auto bg-[#0C0E29]/5 p-8 rounded-lg shadow-lg relative">
+      <TmofSpinner show={showLoader} />
       {step === 1 && (
         <StepPickupDelivery
           pickup={pickup}

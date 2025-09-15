@@ -7,21 +7,23 @@ import { usePathname } from 'next/navigation';
 
 export default function DashboardSidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (tab: string) => void }) {
   const menuItems = [
-    { label: 'Overview', tab: 'overview' },
-    { label: 'Orders', tab: 'orders' },
-    { label: 'Map', tab: 'maps' },
+    { label: 'Overview', tab: 'overview', href: '/dashboard' },
+    { label: 'Orders', tab: 'orders', href: '/orders' },
+    { label: 'Track Parcel', tab: 'track-parcel', href: '/orders/track-parcel' },
+    // { label: 'Map', tab: 'maps', href: '/maps' },
   ];
   return (
     <aside className="w-full md:w-64 bg-gray-100 border-r border-gray-200 flex flex-col justify-between min-h-[300px]">
       <nav className="flex flex-col gap-4 py-8 px-6 flex-1">
         {menuItems.map(item => (
-          <button
-            key={item.tab}
-            onClick={() => setActiveTab(item.tab)}
-            className={`block w-full text-left font-medium rounded-lg px-4 py-2 transition-all text-[#0C0E29] hover:text-[#ffd215] hover:bg-[#0C0E29]/10 ${activeTab === item.tab ? 'bg-[#ffd215] text-black' : ''}`}
-          >
-            {item.label}
-          </button>
+          <Link href={item.href} key={item.tab} passHref legacyBehavior>
+            <button
+              onClick={() => setActiveTab(item.tab)}
+              className={`block w-full text-left font-medium rounded-lg px-4 py-2 transition-all text-[#0C0E29] hover:text-[#ffd215] hover:bg-[#0C0E29]/10 ${activeTab === item.tab ? 'bg-[#ffd215] text-black' : ''}`}
+            >
+              {item.label}
+            </button>
+          </Link>
         ))}
       </nav>
       <div className="px-6 pb-6">

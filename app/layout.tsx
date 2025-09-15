@@ -10,8 +10,8 @@ const queryClient = new QueryClient();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideLayout = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/dashboard');
-  const showNavbar = !pathname.startsWith('/dashboard') && !hideLayout;
+  const hideLayout = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/dashboard') || pathname.startsWith('/orders');
+  const showNavbar = !pathname.startsWith('/dashboard') && !pathname.startsWith('/orders') && !hideLayout;
   return (
     <html lang="en">
       <body className="font-sans bg-gray-100 text-gray-900">
