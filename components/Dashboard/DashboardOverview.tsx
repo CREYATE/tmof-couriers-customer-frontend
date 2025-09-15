@@ -1,41 +1,125 @@
-"use client";
-import React from 'react';
 
-const stats = [
-  { label: 'Total Orders', value: 42, color: 'bg-blue-100', text: 'text-blue-700' },
-  { label: 'Money Spent', value: '₦120,000', color: 'bg-green-100', text: 'text-green-700' },
-  { label: 'Complaints Logged', value: 3, color: 'bg-red-100', text: 'text-red-700' },
-];
+import { Package, User, Truck, Clock } from "lucide-react";
+import Stats from "./Stats";
+import ShipmentCard from "./ShipmentCard";
+import { mockShipments, getShipmentsByStatus, getDriversByStatus } from "@/data/mockData";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const graphData = [12, 19, 8, 15, 22, 30, 18]; // Example: orders per month
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+const DashboardOverview = () => {
+  const shipmentStats = getShipmentsByStatus();
+  const driverStats = getDriversByStatus();
+  
+  const stats = [
+    {
+      title: "Total Shipments",
+      value: mockShipments.length,
+      changeValue: "+8%",
+      changeDirection: "up" as "up",
+      description: "from last week",
+      icon: <Package className="h-4 w-4 text-courier-600" />,
+    },
+    {
+      title: "In Transit",
+      value: shipmentStats.in_transit,
+      changeValue: "-2%",
+      changeDirection: "down" as "down",
+      description: "from yesterday",
+      icon: <Truck className="h-4 w-4 text-courier-600" />,
+    },
+    {
+      title: "Active Drivers",
+      value: driverStats.active + driverStats.on_delivery,
+      changeValue: "No change",
+      changeDirection: "neutral" as "neutral",
+      description: "from last week",
+      icon: <User className="h-4 w-4 text-courier-600" />,
+    },
+    {
+      title: "On Time Delivery",
+      value: "93%",
+      changeValue: "+5%",
+      changeDirection: "up" as "up",
+      description: "from last month",
+      icon: <Clock className="h-4 w-4 text-courier-600" />,
+    },
+  ];
 
-export default function DashboardOverview() {
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {stats.map(stat => (
-          <div key={stat.label} className={`rounded-lg p-6 shadow flex flex-col items-center ${stat.color}`}>
-            <span className="text-lg font-bold mb-2">{stat.label}</span>
-            <span className={`text-2xl font-extrabold ${stat.text}`}>{stat.value}</span>
-          </div>
-        ))}
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome to your courier management dashboard.</p>
+        </div>
+        <div className="flex space-x-4">
+          <Button variant="outline">Export Data</Button>
+          <Button>Create Shipment</Button>
+        </div>
       </div>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="font-bold text-lg mb-4 text-[#ffd215]">Orders This Year</h3>
-        <div className="w-full h-48 flex items-end gap-2">
-          {graphData.map((val, idx) => (
-            <div key={months[idx]} className="flex flex-col items-center justify-end h-full">
-              <div
-                className="w-8 rounded bg-[#ffd215]"
-                style={{ height: `${val * 4}px` }}
-                title={`${val} orders`}
-              ></div>
-              <span className="text-xs mt-2 text-gray-500">{months[idx]}</span>
-            </div>
-          ))}
+
+      <Stats stats={stats} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Recent Shipments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {mockShipments.slice(0, 3).map((shipment) => (
+                  <ShipmentCard key={shipment.id} shipment={shipment} />
+                ))}
+                <div className="text-center mt-4">
+                  <Button variant="link">View all shipments</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <div>
+          <Card className="h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Shipment Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center px-2 py-3">
+                  <span>Pending</span>
+                  <div className="w-1/2 bg-gray-100 rounded-full h-2.5">
+                    <div className="bg-yellow-400 h-2.5 rounded-full" style={{ width: `${(shipmentStats.pending / mockShipments.length) * 100}%` }}></div>
+                  </div>
+                  <span className="font-medium">{shipmentStats.pending}</span>
+                </div>
+                <div className="flex justify-between items-center px-2 py-3">
+                  <span>In Transit</span>
+                  <div className="w-1/2 bg-gray-100 rounded-full h-2.5">
+                    <div className="bg-courier-400 h-2.5 rounded-full" style={{ width: `${(shipmentStats.in_transit / mockShipments.length) * 100}%` }}></div>
+                  </div>
+                  <span className="font-medium">{shipmentStats.in_transit}</span>
+                </div>
+                <div className="flex justify-between items-center px-2 py-3">
+                  <span>Delivered</span>
+                  <div className="w-1/2 bg-gray-100 rounded-full h-2.5">
+                    <div className="bg-green-400 h-2.5 rounded-full" style={{ width: `${(shipmentStats.delivered / mockShipments.length) * 100}%` }}></div>
+                  </div>
+                  <span className="font-medium">{shipmentStats.delivered}</span>
+                </div>
+                <div className="flex justify-between items-center px-2 py-3">
+                  <span>Failed</span>
+                  <div className="w-1/2 bg-gray-100 rounded-full h-2.5">
+                    <div className="bg-red-400 h-2.5 rounded-full" style={{ width: `${(shipmentStats.failed / mockShipments.length) * 100}%` }}></div>
+                  </div>
+                  <span className="font-medium">{shipmentStats.failed}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DashboardOverview;
