@@ -10,6 +10,7 @@ import { usePathname } from 'next/navigation';
 export default function OrdersLayout({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('orders');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -26,11 +27,14 @@ export default function OrdersLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <DashboardHeader onNotificationClick={() => setShowNotifications(true)} />
+      <DashboardHeader
+        onNotificationClick={() => setShowNotifications(true)}
+        onHamburgerClick={() => setDrawerOpen(true)}
+      />
       <Notifications show={showNotifications} onClose={() => setShowNotifications(false)} />
       <div className="flex flex-col md:flex-row flex-1">
-        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 p-6">
+        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} />
+        <main className="flex-1 p-6 pt-20 md:pt-0">
           {children}
         </main>
       </div>

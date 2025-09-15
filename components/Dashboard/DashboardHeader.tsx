@@ -1,22 +1,21 @@
 "use client";
 
 import React from 'react';
-import Image from 'next/image';
-import { Bell } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 
-export default function DashboardHeader({ onNotificationClick }: { onNotificationClick?: () => void }) {
-  // Example user initials, replace with actual user data as needed
+export default function DashboardHeader({ onNotificationClick, onHamburgerClick }: { onNotificationClick?: () => void, onHamburgerClick?: () => void }) {
   const userInitials = "JD";
   return (
-        <header className="px-6 py-4 border-b border-[#0C0E29] bg-[#ffd215] text-black flex items-center justify-between">
+  <header className="px-4 py-4 border-b border-[#0C0E29] bg-[#ffd215] text-black flex items-center justify-between md:px-6 fixed top-0 left-0 w-full z-[100]">
+      {/* Hamburger for mobile only */}
       <div className="flex items-center gap-3">
-        <Image src="/tmof logo.png" alt="Logo" width={36} height={36} className="rounded-full" />
-        <span className="font-bold text-xl">Dashboard</span>
+        <button className="md:hidden p-2 rounded-full hover:bg-yellow-200" id="mobile-hamburger" onClick={onHamburgerClick}>
+          <Menu className="h-6 w-6 text-black" />
+        </button>
       </div>
-      <div className="flex items-center gap-6">
-  <button className="relative p-2 rounded-full hover:bg-yellow-200" onClick={() => { console.log('Bell clicked'); onNotificationClick && onNotificationClick(); }}>
+      <div className="flex items-center gap-4 md:gap-6 ml-auto">
+        <button className="relative p-2 rounded-full hover:bg-yellow-200" onClick={() => { onNotificationClick && onNotificationClick(); }}>
           <Bell className="h-6 w-6 text-black" />
-          {/* Notification dot example */}
           <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500"></span>
         </button>
         <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold text-lg">

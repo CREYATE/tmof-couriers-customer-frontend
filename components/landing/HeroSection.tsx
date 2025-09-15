@@ -15,7 +15,7 @@ const HeroSection = () => {
 
 
   const handleGetStarted = () => {
-    router.push('/create-order');
+    router.push('/login');
   };
 
 
