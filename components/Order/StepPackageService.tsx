@@ -1,5 +1,6 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
+import TmofSpinner from '@/components/ui/TmofSpinner';
 
 type Dimensions = { l: number; w: number; h: number };
 type Props = {
@@ -16,8 +17,19 @@ type Props = {
 };
 
 export default function StepPackageService({ dimensions, setDimensions, weight, setWeight, itemType, setItemType, service, setService, onNext, onBack }: Props) {
+  const [loading, setLoading] = useState(false);
+
+  function handleNext() {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onNext();
+    }, 1000);
+  }
+
   return (
     <div className="space-y-6">
+      <TmofSpinner show={loading} />
       <h2 className="font-bold text-xl text-[#ffd215]">Package & Service Selection</h2>
       <div className="flex flex-col gap-4">
         <input type="number" className="input" placeholder="Length (cm)" value={dimensions.l} onChange={e => setDimensions({ ...dimensions, l: +e.target.value })} />
@@ -37,7 +49,7 @@ export default function StepPackageService({ dimensions, setDimensions, weight, 
       </div>
       <div className="flex gap-4">
         <button className="bg-gray-200 px-6 py-2 rounded font-bold" onClick={onBack}>Back</button>
-        <button className="bg-[#ffd215] px-6 py-2 rounded font-bold" onClick={onNext}>Next</button>
+        <button className="bg-[#ffd215] px-6 py-2 rounded font-bold" onClick={handleNext}>Next</button>
       </div>
     </div>
   );

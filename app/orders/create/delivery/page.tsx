@@ -4,5 +4,5 @@ import { useRouter } from "next/navigation";
 
 export default function DeliveryPage() {
   const router = useRouter();
-  return <DeliveryStep onNext={() => router.push("/orders/create/payment")} />;
+  return <DeliveryStep onNext={() => router.push("/orders/create/delivery-instructions")} />;
 }

@@ -6,6 +6,7 @@ import StepPackageService from './StepPackageService';
 import StepPricingQuote from './StepPricingQuote';
 import StepSenderReceiver from './StepSenderReceiver';
 import StepPayment from './StepPayment';
+import DeliveryInstructionsStep from './DeliveryInstructionsStep';
 
 export default function CreateOrderForm() {
   const [step, setStep] = useState(1);
@@ -29,7 +30,7 @@ export default function CreateOrderForm() {
     setShowLoader(true);
     setTimeout(() => {
       setShowLoader(false);
-      setStep(5);
+      setStep(6);
     }, 2000);
   }
 
@@ -76,8 +77,13 @@ export default function CreateOrderForm() {
           setSender={setSender}
           receiver={receiver}
           setReceiver={setReceiver}
-          onNext={handleProceedToPayment}
+          onNext={() => setStep(5)}
           onBack={() => setStep(3)}
+        />
+      )}
+      {step === 5 && (
+        <DeliveryInstructionsStep
+          onNext={handleProceedToPayment}
         />
       )}
       {showLoader && (
@@ -86,8 +92,8 @@ export default function CreateOrderForm() {
           <div className="text-lg font-bold text-[#ffd215]">Redirecting to payment gateway...</div>
         </div>
       )}
-      {step === 5 && !showLoader && (
-        <StepPayment onBack={() => setStep(4)} />
+      {step === 6 && !showLoader && (
+        <StepPayment onBack={() => setStep(5)} />
       )}
       <style>{`
         @keyframes spin {

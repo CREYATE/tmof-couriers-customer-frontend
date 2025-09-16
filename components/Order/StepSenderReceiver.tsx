@@ -1,5 +1,6 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
+import TmofSpinner from '@/components/ui/TmofSpinner';
 
 type Contact = { name: string; phone: string };
 type Props = {
@@ -12,8 +13,19 @@ type Props = {
 };
 
 export default function StepSenderReceiver({ sender, setSender, receiver, setReceiver, onNext, onBack }: Props) {
+  const [loading, setLoading] = useState(false);
+
+  function handleNext() {
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onNext();
+    }, 1000);
+  }
+
   return (
     <div className="space-y-6">
+      <TmofSpinner show={loading} />
       <h2 className="font-bold text-xl text-[#ffd215]">Sender & Receiver Details</h2>
       <div className="flex flex-col gap-4">
         <input type="text" className="input" placeholder="Sender Name" value={sender.name} onChange={e => setSender({ ...sender, name: e.target.value })} />
@@ -23,7 +35,7 @@ export default function StepSenderReceiver({ sender, setSender, receiver, setRec
       </div>
       <div className="flex gap-4">
         <button className="bg-gray-200 px-6 py-2 rounded font-bold" onClick={onBack}>Back</button>
-        <button className="bg-[#ffd215] px-6 py-2 rounded font-bold" onClick={onNext}>Proceed to Payment</button>
+        <button className="bg-[#ffd215] px-6 py-2 rounded font-bold" onClick={handleNext}>Proceed to Payment</button>
       </div>
     </div>
   );
