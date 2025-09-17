@@ -1,5 +1,3 @@
-// integrations/paystack.ts
-// Usage: import { payWithPaystack } from "@/integrations/paystack";
 
 export interface PaystackOptions {
   key: string; // Your public key
@@ -13,6 +11,13 @@ export interface PaystackOptions {
 }
 
 export function payWithPaystack(options: PaystackOptions) {
+  console.log('payWithPaystack - Options:', {
+    key: options.key.substring(0, 10) + '...', // Mask key for logging
+    email: options.email,
+    amount: options.amount,
+    currency: options.currency,
+    ref: options.ref,
+  });
   // Ensure Paystack script is loaded
   if (!(window as any).PaystackPop) {
     const script = document.createElement('script');
@@ -31,10 +36,16 @@ function launchPaystack(options: PaystackOptions) {
     email: options.email,
     amount: options.amount,
     currency: options.currency || 'ZAR',
-    ref: options.ref || `TMOF-${Date.now()}`,
+    ref: options.ref || `TMOF-ORDER-${Date.now()}`, // Match backend format
     metadata: options.metadata || {},
-    callback: options.onSuccess,
-    onClose: options.onClose || (() => {}),
+    callback: (response: any) => {
+      console.log('payWithPaystack - Payment success:', response);
+      options.onSuccess(response);
+    },
+    onClose: () => {
+      console.log('payWithPaystack - Payment popup closed');
+      if (options.onClose) options.onClose();
+    },
   });
   handler.openIframe();
 }
