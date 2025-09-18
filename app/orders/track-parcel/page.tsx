@@ -6,34 +6,82 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MapPin, Package, Truck, Home } from "lucide-react";
 import TrackParcelMap from "@/components/Maps/GoogleMapComponent";
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
+import axios from 'axios';
 
 export default function TrackParcelPage() {
   const searchParams = useSearchParams();
   const initialTracking = searchParams.get("trackingNumber") || "";
   const [trackingNumber, setTrackingNumber] = useState(initialTracking);
   const [showMap, setShowMap] = useState(!!initialTracking);
-  // Mock order status lookup
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<string | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
 
   useEffect(() => {
-    // Simulate fetching order status by tracking number
+    const jwt = localStorage.getItem('jwt');
+    console.log('JWT in localStorage:', jwt);
     if (trackingNumber) {
-      // Demo: last digit even = delivered, odd = in_transit
-      const lastDigit = trackingNumber.slice(-1);
-      if (lastDigit === '1' || lastDigit === '3' || lastDigit === '5' || lastDigit === '7' || lastDigit === '9') {
-        setOrderStatus('in_transit');
-      } else if (lastDigit === '2' || lastDigit === '4' || lastDigit === '6' || lastDigit === '8' || lastDigit === '0') {
-        setOrderStatus('delivered');
-      } else {
-        setOrderStatus(null);
-      }
-    } else {
-      setOrderStatus(null);
+      fetchOrderStatus(trackingNumber);
+      connectWebSocket(trackingNumber);
     }
+
+    return () => {
+      if (client) {
+        client.deactivate();
+        console.log('WebSocket disconnected for trackingNumber:', trackingNumber);
+      }
+    };
   }, [trackingNumber]);
 
+  const fetchOrderStatus = async (tracking: string) => {
+    try {
+      const jwt = localStorage.getItem('jwt');
+      console.log('Sending track request with JWT:', jwt);
+      const response = await axios.get(`/api/orders/track/${tracking}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      setOrderStatus(response.data.status);
+      setCurrentLocation(response.data.currentLocation);
+      console.log('Fetched order status:', response.data);
+    } catch (error: any) {
+      console.error('Track error:', error.response?.data || error.message);
+      setOrderStatus(null);
+      setCurrentLocation(null);
+    }
+  };
+
+  const connectWebSocket = (tracking: string) => {
+    const jwt = localStorage.getItem('jwt');
+    console.log('WebSocket connecting with JWT:', jwt);
+    const newClient = new Client({
+      brokerURL: 'ws://localhost:8080/ws',
+      connectHeaders: {
+        Authorization: `Bearer ${jwt}`,
+      },
+      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      onConnect: () => {
+        newClient.subscribe(`/topic/order/${tracking}`, (message) => {
+          const update = JSON.parse(message.body);
+          setOrderStatus(update.status);
+          setCurrentLocation(update.currentLocation);
+          console.log('Real-time update:', update);
+          if (update.status === 'DELIVERED') {
+            newClient.deactivate();
+            console.log('WebSocket disconnected due to DELIVERED status');
+          }
+        });
+      },
+      onWebSocketError: (error) => console.error('WebSocket error:', error),
+      onStompError: (frame) => console.error('STOMP error:', frame),
+    });
+    newClient.activate();
+    setClient(newClient);
+  };
+
   return (
-  <div className="max-w-lg mx-auto mt-12">
+    <div className="max-w-lg mx-auto mt-12">
       <Card className="p-8">
         <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
           <Package className="h-6 w-6 text-[#ffd215]" /> Track Parcel
@@ -42,7 +90,7 @@ export default function TrackParcelPage() {
           <Input
             placeholder="Enter Tracking Number"
             value={trackingNumber}
-            onChange={e => setTrackingNumber(e.target.value)}
+            onChange={(e) => setTrackingNumber(e.target.value)}
           />
           <Button
             className="bg-[#ffd215] hover:bg-[#e5bd13] text-black"
@@ -54,35 +102,46 @@ export default function TrackParcelPage() {
         </div>
         {showMap && (
           <div className="space-y-6 mt-6">
-            {/* Horizontal stepper for delivery status */}
             <div className="flex items-center justify-between gap-0 w-full max-w-xl mx-auto">
-              {/* Step 1: Collected */}
               <div className="flex flex-col items-center flex-1">
-                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus ? 'bg-green-500' : 'bg-gray-300'}`}>
+                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus !== 'AWAITING_COLLECTION' ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  <MapPin className="h-6 w-6 text-white" />
+                </div>
+                <span className="mt-2 font-semibold text-sm">Awaiting Collection</span>
+              </div>
+              <div className={`h-1 w-8 mx-2 ${orderStatus !== 'AWAITING_COLLECTION' ? 'bg-green-500' : 'bg-gray-300'}`} style={{ opacity: orderStatus !== 'AWAITING_COLLECTION' ? 1 : 0.5 }} />
+              <div className="flex flex-col items-center flex-1">
+                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus === 'COLLECTED' || orderStatus === 'IN_TRANSIT' || orderStatus === 'DELIVERED' ? 'bg-orange-500' : 'bg-gray-300'}`}>
                   <Package className="h-6 w-6 text-white" />
                 </div>
                 <span className="mt-2 font-semibold text-sm">Collected</span>
               </div>
-              {/* Connector: green if Collected is completed */}
-              <div className={`h-1 w-8 mx-2 ${orderStatus ? 'bg-green-500' : 'bg-gray-300'}`} style={{ opacity: orderStatus ? 1 : 0.5 }} />
-              {/* Step 2: In Transit */}
+              <div className={`h-1 w-8 mx-2 ${orderStatus === 'IN_TRANSIT' || orderStatus === 'DELIVERED' ? 'bg-green-500' : 'bg-gray-300'}`} style={{ opacity: orderStatus === 'IN_TRANSIT' || orderStatus === 'DELIVERED' ? 1 : 0.5 }} />
               <div className="flex flex-col items-center flex-1">
-                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus === 'in_transit' || orderStatus === 'delivered' ? 'bg-orange-500' : 'bg-gray-300'}`}>
+                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus === 'IN_TRANSIT' || orderStatus === 'DELIVERED' ? 'bg-orange-500' : 'bg-gray-300'}`}>
                   <Truck className="h-6 w-6 text-white" />
                 </div>
                 <span className="mt-2 font-semibold text-sm">In Transit</span>
               </div>
-              {/* Connector: green if In Transit is completed */}
-              <div className={`h-1 w-8 mx-2 ${(orderStatus === 'delivered') ? 'bg-green-500' : 'bg-gray-300'}`} style={{ opacity: orderStatus === 'delivered' ? 1 : 0.5 }} />
-              {/* Step 3: Delivered */}
+              <div className={`h-1 w-8 mx-2 ${orderStatus === 'DELIVERED' ? 'bg-green-500' : 'bg-gray-300'}`} style={{ opacity: orderStatus === 'DELIVERED' ? 1 : 0.5 }} />
               <div className="flex flex-col items-center flex-1">
-                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus === 'delivered' ? 'bg-green-600' : 'bg-gray-300'}`}>
+                <div className={`rounded-full h-12 w-12 flex items-center justify-center ${orderStatus === 'DELIVERED' ? 'bg-green-500' : 'bg-gray-300'}`}>
                   <Home className="h-6 w-6 text-white" />
                 </div>
                 <span className="mt-2 font-semibold text-sm">Delivered</span>
               </div>
             </div>
-            <TrackParcelMap trackingNumber={trackingNumber} />
+            {orderStatus === 'IN_TRANSIT' && currentLocation && (
+              <TrackParcelMap trackingNumber={trackingNumber} currentLocation={currentLocation} />
+            )}
+            {orderStatus === 'DELIVERED' && (
+              <div className="text-center mt-4">
+                <p className="text-green-500 font-semibold">Parcel has been delivered!</p>
+              </div>
+            )}
+            <div className="text-center mt-4">
+              <p className="text-gray-700 font-semibold">{orderStatus ? `Status: ${orderStatus}` : 'No order found for this tracking number'}</p>
+            </div>
           </div>
         )}
       </Card>
