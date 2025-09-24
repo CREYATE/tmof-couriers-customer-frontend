@@ -120,9 +120,10 @@ export default function TrackParcelPage() {
   const [loading, setLoading] = useState(true);
 
   return (
-    <div className="max-w-lg mx-auto mt-12">
-      <TmofSpinner show={loading} />
-      <Card className="p-8">
+    <div className="flex items-center justify-center min-h-full p-8">
+      <div className="w-full max-w-lg">
+        <TmofSpinner show={loading} />
+        <Card className="p-10">
         <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
           <Package className="h-6 w-6 text-[#ffd215]" /> Track Parcel
         </h2>
@@ -243,6 +244,7 @@ export default function TrackParcelPage() {
           </div>
         )}
       </Card>
+      </div>
     </div>
   );
 }

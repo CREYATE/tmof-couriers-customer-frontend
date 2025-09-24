@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Package, Truck, Clock } from "lucide-react";
+import { Package, Truck, Clock, Wallet } from "lucide-react";
 import Stats from "./Stats";
 import ShipmentCard from "./ShipmentCard";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ const DashboardOverview: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState(25000); // Mock wallet balance
   const stompClientRef = useRef<Client | null>(null);
 
   useEffect(() => {
@@ -165,6 +166,14 @@ const DashboardOverview: React.FC = () => {
 
   const stats = [
     {
+      title: "Wallet Balance",
+      value: `R${walletBalance.toLocaleString()}`,
+      changeValue: "+2.5%",
+      changeDirection: "up" as const,
+      description: "available funds",
+      icon: <Wallet className="h-4 w-4 text-courier-600" />,
+    },
+    {
       title: "Total Shipments",
       value: orders.length,
       changeValue: "+12%",
@@ -196,12 +205,12 @@ const DashboardOverview: React.FC = () => {
     .slice(0, 3);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-8 space-y-8">
       <TmofSpinner show={loading} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to your courier management dashboard.</p>
+          {/* <p className="text-muted-foreground">Welcome to your courier management dashboard.</p> */}
         </div>
         <div>
           <Button
@@ -223,6 +232,40 @@ const DashboardOverview: React.FC = () => {
       ) : !loading ? (
         <>
           <Stats stats={stats} />
+
+          {/* Wallet Management Card */}
+          <Card className="border border-[#ffd215] bg-gradient-to-r from-[#ffd215]/5 to-[#ffd215]/10">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <Wallet className="h-6 w-6 text-[#ffd215]" />
+                My Wallet
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Available Balance</p>
+                  <p className="text-3xl font-bold text-gray-900">R{walletBalance.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500 mt-1">Last updated: Just now</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    className="bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold px-6"
+                    disabled
+                  >
+                    Add Funds
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="border-[#ffd215] text-[#0C0E29] hover:bg-[#ffd215]/10"
+                    disabled
+                  >
+                    View History
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             <div className="lg:col-span-2 flex flex-col h-full">

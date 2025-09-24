@@ -21,9 +21,11 @@ const MyOrders: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6 min-h-screen p-8">
+    <div className="space-y-8 p-8 pt-4">
       <TmofSpinner show={loading} />
-      <div className="flex items-center justify-between mb-6">
+      
+      {/* Header with Orders Button */}
+      <div className="flex items-center justify-end mb-0 mt-20">
         <Button
           type="button"
           onClick={() => router.push('/orders/all')}
@@ -32,13 +34,15 @@ const MyOrders: React.FC = () => {
           My Orders
         </Button>
       </div>
-      <div className="flex flex-col items-center justify-center py-12">
-        <Package className="h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No orders yet</h3>
-        <p className="text-gray-500 text-center mb-6">
+
+      {/* Main Content */}
+      <div className="flex flex-col items-center justify-center py-16 space-y-6">
+        <Package className="h-12 w-12 text-gray-400" />
+        <h3 className="text-lg font-medium text-gray-900">No orders yet</h3>
+        <p className="text-gray-500 text-center max-w-md">
           You haven't placed any orders yet. Create your first delivery order to get started.
         </p>
-        <Button type="button" onClick={() => router.push('/orders/create/order-type')} className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2 mt-4">
+        <Button type="button" onClick={() => router.push('/orders/create/order-type')} className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2 mt-6">
           <Package className="h-5 w-5 text-black" />
           Create New Order
         </Button>
