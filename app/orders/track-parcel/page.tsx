@@ -9,6 +9,7 @@ import TrackParcelMap from "@/components/Maps/GoogleMapComponent";
 import { initializeWebSocket, subscribeToTopic, disconnectWebSocket } from "@/lib/websocket";
 import axios from "axios";
 import { Client } from "@stomp/stompjs";
+import TmofSpinner from "@/components/ui/TmofSpinner";
 
 interface OrderUpdateResponse {
   status: string;
@@ -31,6 +32,8 @@ export default function TrackParcelPage() {
       if (trackingNumber) {
         await fetchOrderStatus(trackingNumber);
         connectWebSocket(trackingNumber);
+      } else {
+        setLoading(false); // Set loading to false if no tracking number
       }
     };
 
@@ -49,6 +52,7 @@ export default function TrackParcelPage() {
       const jwt = localStorage.getItem("jwt");
       if (!jwt) {
         setError("Authentication required. Please log in.");
+        setLoading(false);
         return;
       }
 
@@ -60,12 +64,14 @@ export default function TrackParcelPage() {
       setOrderStatus(data.status);
       setCurrentLocation(data.currentLocation || null);
       setError(null);
+      setLoading(false);
       console.log("Fetched order status:", data);
     } catch (error: any) {
       console.error("Track error:", error.response?.data || error.message);
       setError(error.response?.data?.error || "Failed to fetch order status");
       setOrderStatus(null);
       setCurrentLocation(null);
+      setLoading(false);
     }
   };
 
@@ -105,14 +111,17 @@ export default function TrackParcelPage() {
 
   const handleTrack = () => {
     if (trackingNumber) {
+      setLoading(true);
       setShowMap(true);
       fetchOrderStatus(trackingNumber);
       connectWebSocket(trackingNumber);
     }
   };
+  const [loading, setLoading] = useState(true);
 
   return (
     <div className="max-w-lg mx-auto mt-12">
+      <TmofSpinner show={loading} />
       <Card className="p-8">
         <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
           <Package className="h-6 w-6 text-[#ffd215]" /> Track Parcel

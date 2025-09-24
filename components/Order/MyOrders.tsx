@@ -4,12 +4,25 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Package } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import TmofSpinner from "@/components/ui/TmofSpinner";
 
 const MyOrders: React.FC = () => {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading completion since no actual data fetching yet
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="space-y-6 min-h-screen p-8">
+      <TmofSpinner show={loading} />
       <div className="flex items-center justify-between mb-6">
         <Button
           type="button"
@@ -35,3 +48,4 @@ const MyOrders: React.FC = () => {
 };
 
 export default MyOrders;
+

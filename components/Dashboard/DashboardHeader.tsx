@@ -6,7 +6,7 @@ import { Bell, Menu } from 'lucide-react';
 export default function DashboardHeader({ onNotificationClick, onHamburgerClick }: { onNotificationClick?: () => void, onHamburgerClick?: () => void }) {
   const userInitials = "JD";
   return (
-  <header className="px-4 py-4 border-b border-[#0C0E29] bg-[#ffd215] text-black flex items-center justify-between md:px-6 fixed top-0 left-0 w-full z-[100]">
+    <header className="px-4 py-3 border-b border-[#0C0E29] bg-[#ffd215] text-black flex items-center justify-between md:px-6 fixed top-0 left-0 w-full z-[100] h-16">
       {/* Hamburger for mobile only */}
       <div className="flex items-center gap-3">
         <button className="md:hidden p-2 rounded-full hover:bg-yellow-200" id="mobile-hamburger" onClick={onHamburgerClick}>

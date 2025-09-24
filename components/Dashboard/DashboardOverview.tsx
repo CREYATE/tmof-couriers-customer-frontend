@@ -6,6 +6,7 @@ import Stats from "./Stats";
 import ShipmentCard from "./ShipmentCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TmofSpinner from "@/components/ui/TmofSpinner";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Client } from "@stomp/stompjs";
@@ -166,16 +167,25 @@ const DashboardOverview: React.FC = () => {
     {
       title: "Total Shipments",
       value: orders.length,
+      changeValue: "+12%",
+      changeDirection: "up" as const,
+      description: "vs last month",
       icon: <Package className="h-4 w-4 text-courier-600" />,
     },
     {
       title: "Awaiting Collection",
       value: shipmentStats.awaiting_collection,
+      changeValue: "+5%",
+      changeDirection: "up" as const,
+      description: "vs last week",
       icon: <Clock className="h-4 w-4 text-courier-600" />,
     },
     {
       title: "In Transit",
       value: shipmentStats.in_transit,
+      changeValue: "0%",
+      changeDirection: "neutral" as const,
+      description: "vs yesterday",
       icon: <Truck className="h-4 w-4 text-courier-600" />,
     },
   ];
@@ -187,6 +197,7 @@ const DashboardOverview: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <TmofSpinner show={loading} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -203,19 +214,13 @@ const DashboardOverview: React.FC = () => {
         </div>
       </div>
 
-      {loading ? (
-        <Card>
-          <CardContent className="flex justify-center py-12">
-            <p className="text-gray-500">Loading dashboard...</p>
-          </CardContent>
-        </Card>
-      ) : error ? (
+      {error ? (
         <Card>
           <CardContent className="flex justify-center py-12">
             <p className="text-red-500">{error}</p>
           </CardContent>
         </Card>
-      ) : (
+      ) : !loading ? (
         <>
           <Stats stats={stats} />
 
@@ -276,7 +281,7 @@ const DashboardOverview: React.FC = () => {
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 };
