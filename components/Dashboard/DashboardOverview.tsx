@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Package, Truck, Clock, Wallet } from "lucide-react";
+import { Package, Truck, Clock, Wallet2 } from "lucide-react";
 import Stats from "./Stats";
 import ShipmentCard from "./ShipmentCard";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { walletService, Wallet } from "@/lib/walletService";
+import toast, { Toaster } from "react-hot-toast";
 
 interface Order {
   id: number;
@@ -53,33 +55,52 @@ const DashboardOverview: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState(25000); // Mock wallet balance
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+  const [togglingWallet, setTogglingWallet] = useState(false);
   const stompClientRef = useRef<Client | null>(null);
 
   useEffect(() => {
-    // Fetch orders
-    const fetchOrders = async () => {
+const fetchOrders = async () => {
+  try {
+    const jwt = localStorage.getItem("jwt");
+    if (!jwt) {
+      throw new Error("No JWT found. Please log in.");
+    }
+    const response = await axios.get("/api/orders/history", {
+      headers: { Authorization: `Bearer ${jwt}` },
+    });
+    console.log("Dashboard orders response:", response.data);
+    const fetchedOrders: Order[] = response.data;
+    setOrders(fetchedOrders);
+    setLoading(false);
+  } catch (err: any) {
+    console.error("Failed to fetch orders:", err.response?.data || err.message);
+    const errorMessage = err.response?.status === 403
+      ? "Access denied. Please log in again."
+      : err.response?.data?.error || err.message || "Failed to fetch orders";
+    setError(errorMessage);
+    setLoading(false);
+    toast.error(errorMessage); // Add toast notification
+  }
+};
+
+
+    const loadWalletData = async () => {
       try {
-        const jwt = localStorage.getItem("jwt");
-        if (!jwt) {
-          throw new Error("No JWT found. Please log in.");
-        }
-        const response = await axios.get("/api/orders/history", {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        console.log("Dashboard orders response:", response.data);
-        const fetchedOrders: Order[] = response.data;
-        setOrders(fetchedOrders);
-        setLoading(false);
-      } catch (err: any) {
-        console.error("Failed to fetch orders:", err.response?.data || err.message);
-        setError(err.response?.data?.error || err.message || "Failed to fetch orders");
-        setLoading(false);
+        const walletData = await walletService.getWalletBalance();
+        setWallet(walletData);
+      } catch (error: any) {
+        console.error("Failed to load wallet data:", error);
+        toast.error(error.message || "Failed to load wallet data");
+      } finally {
+        setLoadingWallet(false);
       }
     };
-    fetchOrders();
 
-    // Set up WebSocket
+    fetchOrders();
+    loadWalletData();
+
     const socket = new SockJS("http://localhost:8080/ws");
     const client = new Client({
       webSocketFactory: () => socket,
@@ -92,9 +113,7 @@ const DashboardOverview: React.FC = () => {
             console.log("WebSocket update received:", update);
             setOrders((prevOrders) =>
               prevOrders.map((o) =>
-                o.trackingNumber === order.trackingNumber
-                  ? { ...o, status: update.status }
-                  : o
+                o.trackingNumber === order.trackingNumber ? { ...o, status: update.status } : o
               )
             );
           });
@@ -110,7 +129,6 @@ const DashboardOverview: React.FC = () => {
     client.activate();
     stompClientRef.current = client;
 
-    // Cleanup
     return () => {
       if (stompClientRef.current) {
         stompClientRef.current.deactivate();
@@ -120,7 +138,6 @@ const DashboardOverview: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Update subscriptions when orders change
     if (stompClientRef.current && stompClientRef.current.connected) {
       stompClientRef.current.deactivate();
     }
@@ -136,9 +153,7 @@ const DashboardOverview: React.FC = () => {
             console.log("WebSocket update received:", update);
             setOrders((prevOrders) =>
               prevOrders.map((o) =>
-                o.trackingNumber === order.trackingNumber
-                  ? { ...o, status: update.status }
-                  : o
+                o.trackingNumber === order.trackingNumber ? { ...o, status: update.status } : o
               )
             );
           });
@@ -162,16 +177,35 @@ const DashboardOverview: React.FC = () => {
     };
   }, [orders.length]);
 
+  const handleToggleWallet = async () => {
+    if (!wallet) return;
+    setTogglingWallet(true);
+    try {
+      const updatedWallet = await walletService.toggleWalletStatus(!wallet.isActive);
+      setWallet(updatedWallet);
+      toast.success(
+        updatedWallet.isActive
+          ? "Wallet activated successfully! Check your email for confirmation."
+          : "Wallet deactivated successfully."
+      );
+    } catch (error: any) {
+      console.error("Failed to toggle wallet status:", error);
+      toast.error(error.message || "Failed to toggle wallet status");
+    } finally {
+      setTogglingWallet(false);
+    }
+  };
+
   const shipmentStats = getShipmentStats(orders);
 
   const stats = [
     {
       title: "Wallet Balance",
-      value: `R${walletBalance.toLocaleString()}`,
-      changeValue: "+2.5%",
-      changeDirection: "up" as const,
-      description: "available funds",
-      icon: <Wallet className="h-4 w-4 text-courier-600" />,
+      value: `R${wallet ? wallet.balance.toLocaleString("en-ZA", { minimumFractionDigits: 2 }) : "0.00"}`,
+      changeValue: wallet?.isActive ? "Active" : "Inactive",
+      changeDirection: wallet?.isActive ? ("up" as const) : ("down" as const),
+      description: wallet?.isActive ? "available funds" : "wallet disabled",
+      icon: <Wallet2 className="h-4 w-4 text-courier-600" />,
     },
     {
       title: "Total Shipments",
@@ -206,11 +240,11 @@ const DashboardOverview: React.FC = () => {
 
   return (
     <div className="p-8 space-y-8">
-      <TmofSpinner show={loading} />
+      <Toaster position="top-right" />
+      <TmofSpinner show={loading || loadingWallet} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          {/* <p className="text-muted-foreground">Welcome to your courier management dashboard.</p> */}
         </div>
         <div>
           <Button
@@ -229,15 +263,14 @@ const DashboardOverview: React.FC = () => {
             <p className="text-red-500">{error}</p>
           </CardContent>
         </Card>
-      ) : !loading ? (
+      ) : !loading && !loadingWallet ? (
         <>
           <Stats stats={stats} />
 
-          {/* Wallet Management Card */}
           <Card className="border border-[#ffd215] bg-gradient-to-r from-[#ffd215]/5 to-[#ffd215]/10">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <Wallet className="h-6 w-6 text-[#ffd215]" />
+                <Wallet2 className="h-6 w-6 text-[#ffd215]" />
                 My Wallet
               </CardTitle>
             </CardHeader>
@@ -245,22 +278,49 @@ const DashboardOverview: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Available Balance</p>
-                  <p className="text-3xl font-bold text-gray-900">R{walletBalance.toLocaleString()}</p>
-                  <p className="text-sm text-gray-500 mt-1">Last updated: Just now</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    R{wallet ? wallet.balance.toLocaleString("en-ZA", { minimumFractionDigits: 2 }) : "0.00"}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className={`text-sm ${wallet?.isActive ? "text-green-600" : "text-red-600"}`}>
+                      {wallet?.isActive ? "● Active" : "● Inactive"}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Last updated: Just now
+                    </span>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Button 
+                  <Button
                     className="bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold px-6"
-                    disabled
+                    onClick={() => router.push("/wallet")}
                   >
-                    Add Funds
+                    Manage Wallet
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="border-[#ffd215] text-[#0C0E29] hover:bg-[#ffd215]/10"
-                    disabled
+                    onClick={() => router.push("/wallet/transactions")}
                   >
                     View History
+                  </Button>
+                  <Button
+                    variant={wallet?.isActive ? "destructive" : "default"}
+                    className={
+                      wallet?.isActive
+                        ? "bg-red-600 hover:bg-red-700 text-white"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }
+                    onClick={handleToggleWallet}
+                    disabled={togglingWallet || !wallet}
+                  >
+                    {togglingWallet ? (
+                      <TmofSpinner show={true} />
+                    ) : wallet?.isActive ? (
+                      "Deactivate Wallet"
+                    ) : (
+                      "Activate Wallet"
+                    )}
                   </Button>
                 </div>
               </div>

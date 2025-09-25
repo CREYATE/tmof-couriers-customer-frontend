@@ -1,13 +1,38 @@
-import React, { useState } from "react";
+// components/Order/PaymentStep.tsx
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import TmofSpinner from "@/components/ui/TmofSpinner";
 import { payWithPaystack } from '@/integrations/paystack';
 import axios from 'axios';
+import { walletService, Wallet } from '@/lib/walletService';
 
-export default function PaymentStep({ orderData, onNext }: { orderData: any; onNext: (data: any) => void }) {
+interface PaymentStepProps {
+  orderData: any;
+  onNext: (data: any) => void;
+}
+
+export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState('');
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [useWallet, setUseWallet] = useState(false);
+  const [loadingWallet, setLoadingWallet] = useState(true);
+
+  useEffect(() => {
+    loadWalletBalance();
+  }, []);
+
+  const loadWalletBalance = async () => {
+    try {
+      const walletData = await walletService.getWalletBalance();
+      setWallet(walletData);
+    } catch (error) {
+      console.error('Failed to load wallet balance:', error);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
 
   const mapServiceType = (serviceType: string) => {
     switch (serviceType) {
@@ -19,14 +44,15 @@ export default function PaymentStep({ orderData, onNext }: { orderData: any; onN
     }
   };
 
-  const handlePaystackPayment = async () => {
+  const handleWalletPayment = async () => {
     if (!orderData.price) {
       setError('Price is missing. Please go back and recalculate the estimate.');
-      console.error('PaymentStep - Missing price in orderData:', orderData);
       return;
     }
+
     setRedirecting(true);
     setError('');
+
     try {
       const mappedOrderData = {
         pickupAddress: orderData.pickupAddress,
@@ -39,16 +65,77 @@ export default function PaymentStep({ orderData, onNext }: { orderData: any; onN
         recipientEmail: orderData.recipientEmail,
         deliveryNotes: orderData.deliveryNotes,
         preferredTime: orderData.preferredTime,
+        useWallet: true,
       };
-      console.log('PaymentStep - Sending initialize-payment request:', mappedOrderData);
+
+      console.log('Processing wallet payment:', mappedOrderData);
       const initResponse = await axios.post('/api/orders/initialize-payment', mappedOrderData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
       });
-      const { authorizationUrl, reference } = initResponse.data;
 
       if (initResponse.data.error) {
         throw new Error(initResponse.data.error);
       }
+
+      // For wallet payments, we can proceed directly since payment is instant
+      const verifyResponse = await axios.post('/api/orders/verify-payment', {
+        paystackVerifyRequest: { reference: initResponse.data.reference },
+        orderRequest: mappedOrderData,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+      });
+
+      if (verifyResponse.data.error) {
+        throw new Error(verifyResponse.data.error);
+      }
+
+      console.log('Wallet payment successful:', verifyResponse.data);
+      onNext(verifyResponse.data);
+      
+      // Refresh wallet balance
+      await loadWalletBalance();
+
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Wallet payment failed. Please try again or use Paystack.');
+      console.error('Wallet payment error:', error);
+      setRedirecting(false);
+    }
+  };
+
+  const handlePaystackPayment = async () => {
+    if (!orderData.price) {
+      setError('Price is missing. Please go back and recalculate the estimate.');
+      return;
+    }
+
+    setRedirecting(true);
+    setError('');
+
+    try {
+      const mappedOrderData = {
+        pickupAddress: orderData.pickupAddress,
+        deliveryAddress: orderData.deliveryAddress,
+        weight: orderData.weight,
+        serviceType: mapServiceType(orderData.serviceType),
+        description: orderData.description,
+        recipientName: orderData.recipientName,
+        recipientPhone: orderData.recipientPhone,
+        recipientEmail: orderData.recipientEmail,
+        deliveryNotes: orderData.deliveryNotes,
+        preferredTime: orderData.preferredTime,
+        useWallet: false,
+      };
+
+      console.log('Processing Paystack payment:', mappedOrderData);
+      const initResponse = await axios.post('/api/orders/initialize-payment', mappedOrderData, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+      });
+
+      if (initResponse.data.error) {
+        throw new Error(initResponse.data.error);
+      }
+
+      const { authorizationUrl, reference } = initResponse.data;
 
       payWithPaystack({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || 'pk_test_missing',
@@ -58,60 +145,140 @@ export default function PaymentStep({ orderData, onNext }: { orderData: any; onN
         ref: reference,
         onSuccess: async (paystackResponse) => {
           try {
-            console.log('PaymentStep - Paystack success:', paystackResponse);
+            console.log('Paystack success:', paystackResponse);
             const verifyResponse = await axios.post('/api/orders/verify-payment', {
               paystackVerifyRequest: { reference },
               orderRequest: mappedOrderData,
             }, {
               headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
             });
+
             if (verifyResponse.data.error) {
               throw new Error(verifyResponse.data.error);
             }
-            console.log('PaymentStep - Order placed:', verifyResponse.data);
+
+            console.log('Order placed:', verifyResponse.data);
             onNext(verifyResponse.data);
           } catch (verifyError: any) {
-            setError(verifyError.response?.data?.error || 'Payment verification failed. Please contact support.');
-            console.error('PaymentStep - Verification error:', verifyError);
+            setError(verifyError.response?.data?.error || 'Payment verification failed.');
+            console.error('Verification error:', verifyError);
             setRedirecting(false);
           }
         },
         onClose: () => {
           setRedirecting(false);
           setError('Payment cancelled. You can try again.');
-          console.log('PaymentStep - Paystack popup closed');
         },
       });
+
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to initialize payment. Please try again or contact support.');
-      console.error('PaymentStep - Payment init error:', error);
+      setError(error.response?.data?.error || 'Failed to initialize payment.');
+      console.error('Payment init error:', error);
       setRedirecting(false);
     }
   };
 
-  console.log('PaymentStep - Received orderData:', orderData);
+  const canUseWallet = wallet?.isActive && wallet.balance >= orderData.price;
 
   return (
     <Card className="max-w-md mx-auto mt-8 p-6">
-      <TmofSpinner show={redirecting} />
-      <h2 className="text-xl font-bold mb-4">Payment</h2>
+      <TmofSpinner show={redirecting || loadingWallet} />
+      <h2 className="text-xl font-bold mb-4">Payment Method</h2>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="flex flex-col gap-4">
-        <div className="bg-[#ffd215] rounded-lg p-4 text-black font-bold text-center mb-2">
-          Paystack Payment
+      
+      {/* Wallet Balance Display */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 mb-4 border border-green-200">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-sm text-gray-600">Wallet Balance</p>
+            <p className="text-2xl font-bold text-green-700">
+              R{wallet ? wallet.balance.toLocaleString('en-ZA', { minimumFractionDigits: 2 }) : '0.00'}
+            </p>
+            <p className={`text-xs ${wallet?.isActive ? 'text-green-600' : 'text-red-600'}`}>
+              {wallet?.isActive ? 'Active' : 'Inactive'}
+            </p>
+          </div>
+          {canUseWallet && (
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Order Amount</p>
+              <p className="text-lg font-semibold">R{orderData.price?.toFixed(2)}</p>
+              <p className="text-xs text-green-600">
+                Balance after: R{(wallet.balance - orderData.price).toFixed(2)}
+              </p>
+            </div>
+          )}
         </div>
-        <div className="bg-gray-100 rounded-lg p-2 text-center text-gray-700 font-semibold mb-2">
-          Amount to Pay: R{orderData.price ? orderData.price.toFixed(2) : 'N/A'}
+      </div>
+
+      {/* Payment Options */}
+      <div className="space-y-4">
+        {/* Wallet Payment Option */}
+        {wallet?.isActive && (
+          <div className={`border-2 rounded-lg p-4 ${
+            useWallet ? 'border-[#ffd215] bg-[#ffd215]/10' : 'border-gray-200'
+          }`}>
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="radio"
+                name="paymentMethod"
+                checked={useWallet}
+                onChange={() => setUseWallet(true)}
+                disabled={!canUseWallet}
+                className="h-4 w-4 text-[#ffd215] focus:ring-[#ffd215]"
+              />
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Pay with Wallet</span>
+                  {!canUseWallet && (
+                    <span className="text-xs text-red-500 bg-red-50 px-2 py-1 rounded">
+                      Insufficient balance
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">
+                  Instant payment using your wallet balance
+                </p>
+              </div>
+            </label>
+          </div>
+        )}
+
+        {/* Paystack Payment Option */}
+        <div className={`border-2 rounded-lg p-4 ${
+          !useWallet ? 'border-[#ffd215] bg-[#ffd215]/10' : 'border-gray-200'
+        }`}>
+          <label className="flex items-center space-x-3 cursor-pointer">
+            <input
+              type="radio"
+              name="paymentMethod"
+              checked={!useWallet}
+              onChange={() => setUseWallet(false)}
+              className="h-4 w-4 text-[#ffd215] focus:ring-[#ffd215]"
+            />
+            <div>
+              <span className="font-medium">Pay with Paystack</span>
+              <p className="text-sm text-gray-600">
+                Secure payment via credit/debit card
+              </p>
+            </div>
+          </label>
         </div>
+
+        {/* Payment Button */}
         <Button
-          onClick={handlePaystackPayment}
-          disabled={redirecting || !orderData.price}
-          className="bg-[#ffd215] hover:bg-[#e5bd13] text-black w-full h-12 text-lg font-bold flex items-center justify-center"
+          onClick={useWallet ? handleWalletPayment : handlePaystackPayment}
+          disabled={redirecting || !orderData.price || (useWallet && !canUseWallet)}
+          className="bg-[#ffd215] hover:bg-[#e5bd13] text-black w-full h-12 text-lg font-bold"
         >
-          {redirecting ? 'Redirecting to Paystack…' : 'Pay with Paystack'}
+          {redirecting ? 'Processing Payment...' : 
+           useWallet ? 'Pay with Wallet' : 'Pay with Paystack'}
         </Button>
+
         <p className="text-xs text-gray-500 text-center mt-2">
-          You will be redirected to Paystack's secure payment gateway to complete your payment.
+          {useWallet 
+            ? 'Your wallet balance will be deducted instantly.'
+            : 'You will be redirected to Paystack\'s secure payment gateway.'
+          }
         </p>
       </div>
     </Card>
