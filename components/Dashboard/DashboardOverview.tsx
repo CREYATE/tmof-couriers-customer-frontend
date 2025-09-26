@@ -297,13 +297,13 @@ const fetchOrders = async () => {
                   >
                     Manage Wallet
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="outline"
                     className="border-[#ffd215] text-[#0C0E29] hover:bg-[#ffd215]/10"
                     onClick={() => router.push("/wallet/transactions")}
                   >
                     View History
-                  </Button>
+                  </Button> */}
                   <Button
                     variant={wallet?.isActive ? "destructive" : "default"}
                     className={

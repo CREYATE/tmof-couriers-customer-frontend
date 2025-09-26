@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TmofSpinner from "@/components/ui/TmofSpinner";
 import { walletService, Wallet, WalletTransaction } from '@/lib/walletService';
-import {Wallet2, Plus, History, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from 'lucide-react';
+import { payWithPaystack } from '@/integrations/paystack';
+import { Wallet2, Plus, History, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const WalletManagement: React.FC = () => {
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -15,44 +17,132 @@ const WalletManagement: React.FC = () => {
   const [depositAmount, setDepositAmount] = useState('');
   const [showDeposit, setShowDeposit] = useState(false);
   const [error, setError] = useState('');
+  const [processingDeposit, setProcessingDeposit] = useState(false);
 
   useEffect(() => {
     loadWalletData();
+    checkForPaymentCallback();
   }, []);
 
-  const loadWalletData = async () => {
+  // Check if we're returning from Paystack payment
+  const checkForPaymentCallback = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const reference = urlParams.get('reference');
+    const trxref = urlParams.get('trxref');
+    
+    if (reference || trxref) {
+      const ref = reference || trxref;
+      console.log('Processing Paystack callback with reference:', ref);
+      verifyDeposit(ref!);
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  };
+
+const loadWalletData = async () => {
+  try {
+    setLoading(true);
+    setError('');
+    
+    // Load wallet balance first
+    const walletData = await walletService.getWalletBalance();
+    setWallet(walletData);
+    
+    // Then load transactions separately to handle errors gracefully
     try {
-      setLoading(true);
-      const [walletData, transactionsData] = await Promise.all([
-        walletService.getWalletBalance(),
-        walletService.getTransactionHistory({ size: 10 })
-      ]);
-      setWallet(walletData);
+      const transactionsData = await walletService.getTransactionHistory({ size: 10 });
       setTransactions(transactionsData.content);
+    } catch (transactionError: any) {
+      console.warn('Could not load transactions:', transactionError);
+      setTransactions([]);
+      // Don't set main error for transaction failures, just show empty state
+    }
+    
+  } catch (error: any) {
+    const errorMsg = error.message || 'Failed to load wallet data';
+    setError(errorMsg);
+    toast.error(errorMsg);
+    console.error('Wallet data loading error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const verifyDeposit = async (reference: string) => {
+    try {
+      setProcessingDeposit(true);
+      setError('');
+      
+      console.log('Verifying deposit with reference:', reference);
+      const result = await walletService.verifyDeposit(reference);
+      
+      if (result.success) {
+        toast.success('Deposit verified successfully! Funds added to your wallet.');
+        await loadWalletData(); // Reload wallet data to show updated balance
+      } else {
+        const errorMsg = result.error || 'Deposit verification failed';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
     } catch (error: any) {
-      setError('Failed to load wallet data');
-      console.error('Wallet data loading error:', error);
+      const errorMsg = error.message || 'Deposit verification failed';
+      console.error('Deposit verification error:', error);
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
-      setLoading(false);
+      setProcessingDeposit(false);
     }
   };
 
   const handleDeposit = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
       setError('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
 
     try {
       setError('');
-      const response = await walletService.depositToWallet(parseFloat(depositAmount));
+      setProcessingDeposit(true);
       
-      // Redirect to Paystack
-      if (response.authorizationUrl) {
-        window.location.href = response.authorizationUrl;
+      console.log('Starting deposit process with amount:', depositAmount);
+      
+      // Initialize deposit with backend
+      const response = await walletService.depositToWallet(parseFloat(depositAmount));
+      console.log('Deposit initialization response:', response);
+      
+      if (!response.authorizationUrl) {
+        throw new Error('Payment initialization failed - no authorization URL received');
       }
+
+      // Use Paystack inline.js for payment
+      const paystackOptions = {
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!, // Make sure this is set in your .env
+        email: wallet?.userEmail || '', // Get from wallet or user context
+        amount: parseFloat(depositAmount) * 100, // Convert to kobo/cents
+        currency: 'ZAR',
+        ref: response.reference,
+        onSuccess: (paymentResponse: any) => {
+          console.log('Paystack payment success:', paymentResponse);
+          // Payment successful, now verify the deposit
+          verifyDeposit(paymentResponse.reference);
+        },
+        onClose: () => {
+          console.log('Paystack payment window closed');
+          toast('Payment window closed. If you completed payment, funds will be added shortly.');
+          setProcessingDeposit(false);
+        }
+      };
+
+      payWithPaystack(paystackOptions);
+      
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Deposit failed');
+      console.error('Deposit error:', error);
+      const errorMessage = error.message || 'Deposit failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setProcessingDeposit(false);
     }
   };
 
@@ -60,11 +150,15 @@ const WalletManagement: React.FC = () => {
     if (!wallet) return;
 
     try {
+      setError('');
       const newStatus = !wallet.isActive;
       const updatedWallet = await walletService.toggleWalletStatus(newStatus);
       setWallet(updatedWallet);
+      toast.success(`Wallet ${newStatus ? 'activated' : 'deactivated'} successfully!`);
     } catch (error: any) {
-      setError('Failed to update wallet status');
+      const errorMsg = error.message || 'Failed to update wallet status';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -108,9 +202,10 @@ const WalletManagement: React.FC = () => {
         <Button
           onClick={() => setShowDeposit(!showDeposit)}
           className="bg-[#ffd215] hover:bg-[#e5bd13] text-black"
+          disabled={processingDeposit}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Funds
+          {processingDeposit ? 'Processing...' : 'Add Funds'}
         </Button>
       </div>
 
@@ -149,6 +244,7 @@ const WalletManagement: React.FC = () => {
               onClick={toggleWalletStatus}
               variant="outline"
               className="flex items-center space-x-2"
+              disabled={!wallet || processingDeposit}
             >
               {wallet?.isActive ? (
                 <ToggleRight className="h-4 w-4 text-green-600" />
@@ -179,6 +275,7 @@ const WalletManagement: React.FC = () => {
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#ffd215] focus:border-transparent"
                   min="1"
                   step="0.01"
+                  disabled={processingDeposit}
                 />
               </div>
               <div className="flex space-x-3">
@@ -186,6 +283,7 @@ const WalletManagement: React.FC = () => {
                   onClick={() => setDepositAmount('100')}
                   variant="outline"
                   className="flex-1"
+                  disabled={processingDeposit}
                 >
                   R100
                 </Button>
@@ -193,6 +291,7 @@ const WalletManagement: React.FC = () => {
                   onClick={() => setDepositAmount('500')}
                   variant="outline"
                   className="flex-1"
+                  disabled={processingDeposit}
                 >
                   R500
                 </Button>
@@ -200,16 +299,24 @@ const WalletManagement: React.FC = () => {
                   onClick={() => setDepositAmount('1000')}
                   variant="outline"
                   className="flex-1"
+                  disabled={processingDeposit}
                 >
                   R1,000
                 </Button>
               </div>
               <Button
                 onClick={handleDeposit}
-                disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                disabled={!depositAmount || parseFloat(depositAmount) <= 0 || processingDeposit}
                 className="w-full bg-[#ffd215] hover:bg-[#e5bd13] text-black"
               >
-                Proceed to Payment
+                {processingDeposit ? (
+                  <>
+                    <TmofSpinner show={true} />
+                    <span className="ml-2">Processing Payment...</span>
+                  </>
+                ) : (
+                  'Proceed to Payment'
+                )}
               </Button>
             </div>
           </CardContent>
@@ -260,13 +367,6 @@ const WalletManagement: React.FC = () => {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-          {transactions.length > 0 && (
-            <div className="text-center mt-4">
-              <Button variant="outline" onClick={() => {/* Navigate to full history */}}>
-                View All Transactions
-              </Button>
             </div>
           )}
         </CardContent>

@@ -29,13 +29,13 @@ export default function Navbar() {
           <nav className="hidden lg:flex space-x-6 items-center">
             <Link href="/" className="text-gray-300 hover:text-white">Home</Link>
             <Link href="/about" className="text-gray-300 hover:text-white">About Us</Link>
-            <Button 
+            {/* <Button 
               variant="ghost" 
               className="text-gray-300 hover:text-white px-0"
               onClick={handleBookCourierClick}
             >
               Book a Courier
-            </Button>
+            </Button> */}
             <div className="flex space-x-2">
               <Button 
                 className="bg-[#ffd215] hover:bg-[#e6bd13] text-black font-normal"

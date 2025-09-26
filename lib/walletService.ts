@@ -7,7 +7,7 @@ export interface Wallet {
   createdAt: string;
   userEmail: string;
   userName: string;
-  error?: string; // Added to handle backend error messages
+  error?: string;
 }
 
 export interface WalletTransaction {
@@ -33,6 +33,18 @@ export interface TransactionHistoryRequest {
   transactionType?: string;
 }
 
+export interface PaystackInitializeResponse {
+  authorizationUrl: string;
+  accessCode: string;
+  reference: string;
+  error?: string;
+}
+
+export interface VerifyDepositResponse {
+  success: boolean;
+  error?: string;
+}
+
 class WalletService {
   private baseURL = '/api/wallet';
 
@@ -41,55 +53,96 @@ class WalletService {
     if (!jwt) {
       throw new Error('No JWT found. Please log in.');
     }
-    const response = await axios.get(`${this.baseURL}/balance`, {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
-    const data = response.data as Wallet;
-    if (data.error) {
-      throw new Error(data.error);
+    
+    try {
+      const response = await axios.get(`${this.baseURL}/balance`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Get wallet balance error:', error);
+      throw new Error(error.response?.data?.error || error.message || 'Failed to fetch wallet balance');
     }
-    return data;
   }
 
-  async depositToWallet(amount: number): Promise<any> {
+  async depositToWallet(amount: number): Promise<PaystackInitializeResponse> {
     const jwt = localStorage.getItem('jwt');
     if (!jwt) {
       throw new Error('No JWT found. Please log in.');
     }
-    const request: DepositRequest = { amount, paymentMethod: 'PAYSTACK' };
-    const response = await axios.post(`${this.baseURL}/deposit`, request, {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
-    if (response.data.error) {
-      throw new Error(response.data.error);
+    
+    try {
+      const request: DepositRequest = { amount, paymentMethod: 'PAYSTACK' };
+      const response = await axios.post(`${this.baseURL}/deposit`, request, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      console.log('Deposit response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Deposit error:', error);
+      throw new Error(error.response?.data?.error || error.message || 'Deposit failed');
     }
-    return response.data;
   }
 
-  async verifyDeposit(reference: string): Promise<boolean> {
+  async verifyDeposit(reference: string): Promise<VerifyDepositResponse> {
     const jwt = localStorage.getItem('jwt');
     if (!jwt) {
       throw new Error('No JWT found. Please log in.');
     }
-    const response = await axios.post(`${this.baseURL}/deposit/verify`, 
-      { reference }, 
-      { headers: { Authorization: `Bearer ${jwt}` } }
-    );
-    if (response.data && typeof response.data === 'string') {
-      throw new Error(response.data);
+    
+    try {
+      const response = await axios.post(`${this.baseURL}/deposit/verify`, 
+        { reference }, 
+        { 
+          headers: { 
+            Authorization: `Bearer ${jwt}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+      
+      console.log('Verify deposit response:', response.data);
+      
+      // Handle different response formats
+      if (response.status === 200) {
+        return { success: true };
+      } else {
+        return { 
+          success: false, 
+          error: response.data?.error || 'Verification failed' 
+        };
+      }
+    } catch (error: any) {
+      console.error('Verify deposit error:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.error || error.response?.data || error.message || 'Verification failed' 
+      };
     }
-    return response.status === 200;
   }
 
-  async getTransactionHistory(params: TransactionHistoryRequest = {}): Promise<{
-    content: WalletTransaction[];
-    totalPages: number;
-    totalElements: number;
-  }> {
-    const jwt = localStorage.getItem('jwt');
-    if (!jwt) {
-      throw new Error('No JWT found. Please log in.');
-    }
+async getTransactionHistory(params: TransactionHistoryRequest = {}): Promise<{
+  content: WalletTransaction[];
+  totalPages: number;
+  totalElements: number;
+}> {
+  const jwt = localStorage.getItem('jwt');
+  if (!jwt) {
+    throw new Error('No JWT found. Please log in.');
+  }
+  
+  try {
+    // Fix: Use the correct endpoint path
     const response = await axios.get(`${this.baseURL}/transactions`, {
       headers: { Authorization: `Bearer ${jwt}` },
       params: {
@@ -98,30 +151,49 @@ class WalletService {
         type: params.transactionType,
       },
     });
+    
     if (response.data.error) {
       throw new Error(response.data.error);
     }
+    
     return response.data;
+  } catch (error: any) {
+    console.error('Get transaction history error:', error);
+    
+    // Provide more specific error messages
+    if (error.response?.status === 403) {
+      throw new Error('Access denied. Please log in again.');
+    } else if (error.response?.status === 401) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    
+    throw new Error(error.response?.data?.error || error.message || 'Failed to fetch transactions');
   }
+}
 
   async toggleWalletStatus(activate: boolean): Promise<Wallet> {
     const jwt = localStorage.getItem('jwt');
     if (!jwt) {
       throw new Error('No JWT found. Please log in.');
     }
+    
     try {
-      const response = await axios.post(`${this.baseURL}/toggle?activate=${activate}`, {}, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
-      const data = response.data as Wallet;
-      if (data.error) {
-        throw new Error(data.error);
+      const response = await axios.post(
+        `${this.baseURL}/toggle?activate=${activate}`, 
+        {}, 
+        {
+          headers: { Authorization: `Bearer ${jwt}` },
+        }
+      );
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
       }
-      return data;
+      
+      return response.data;
     } catch (error: any) {
-      // Enhance error message for better user feedback
-      const errorMessage = error.response?.data?.error || `Failed to ${activate ? 'activate' : 'deactivate'} wallet`;
-      throw new Error(errorMessage);
+      console.error('Toggle wallet status error:', error);
+      throw new Error(error.response?.data?.error || `Failed to ${activate ? 'activate' : 'deactivate'} wallet`);
     }
   }
 }
