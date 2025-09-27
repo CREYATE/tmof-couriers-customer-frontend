@@ -43,24 +43,34 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
       const response = await axios.post('/api/orders/estimate', {
         pickupAddress: formData.pickupAddress,
         deliveryAddress: formData.deliveryAddress,
-        weight: formData.weight || 1.0,
+        weight: formData.weight ? parseFloat(formData.weight) : 1.0,
         serviceType: formData.serviceType,
       }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
       });
+
       if (response.data.error) {
         throw new Error(response.data.error);
       }
-      setEstimatedPrice(response.data.price);
+
+      if (response.data.distanceKm == null || response.data.price == null) {
+        throw new Error('Invalid estimate response: distance or price is missing');
+      }
+
+      const distanceKm = Number(response.data.distanceKm).toFixed(2); // Format to 2 decimal places
+      const price = Number(response.data.price); // Convert BigDecimal string to number
+
+      setEstimatedPrice(price);
       setFormData(prev => ({
         ...prev,
-        distance: response.data.distanceKm.toString(),
-        price: response.data.price,
+        distance: distanceKm,
+        price: price,
       }));
-      console.log('Estimate received:', { price: response.data.price, distance: response.data.distanceKm });
-      onNext({ ...formData, price: response.data.price, distance: response.data.distanceKm });
+      console.log('Estimate received:', { price, distance: distanceKm });
+      onNext({ ...formData, price, distance: distanceKm });
     } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to calculate estimate');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to calculate estimate';
+      setError(errorMessage);
       console.error('Estimate error:', error);
     }
     setIsCalculating(false);
@@ -230,7 +240,7 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
           </p>
         </div>
         <div className="bg-[#ffd215] rounded-lg p-4 text-black font-bold text-center mb-4">
-          {isCalculating ? 'Calculating...' : estimatedPrice !== null ? `Estimated Price: R${estimatedPrice}` : 'Select valid addresses to get an estimate'}
+          {isCalculating ? 'Calculating...' : estimatedPrice !== null ? `Estimated Price: R${estimatedPrice.toFixed(2)}` : 'Select valid addresses to get an estimate'}
         </div>
         <Button
           onClick={handleProceed}

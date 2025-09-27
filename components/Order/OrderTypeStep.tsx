@@ -23,7 +23,6 @@ export default function OrderTypeStep({ onNext }: { onNext: (serviceType: string
     setTimeout(() => {
       setLoading(false);
       onNext(serviceType);
-      router.push(`/orders/create/delivery?serviceType=${encodeURIComponent(serviceType)}`);
     }, 1000);
   }
 

@@ -11,7 +11,13 @@ export default function OrderTypePage() {
     const updatedOrderData = { ...orderData, serviceType };
     setOrderData(updatedOrderData);
     console.log('OrderTypePage - Proceeding with orderData:', updatedOrderData);
-    router.push(`/orders/create/delivery?serviceType=${encodeURIComponent(serviceType)}`);
+    
+    // Route to appropriate form based on service type
+    if (serviceType === "FURNITURE_MOVING") {
+      router.push(`/orders/create/furniture?serviceType=${encodeURIComponent(serviceType)}`);
+    } else {
+      router.push(`/orders/create/delivery?serviceType=${encodeURIComponent(serviceType)}`);
+    }
   };
 
   return <OrderTypeStep onNext={handleNext} />;

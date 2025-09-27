@@ -61,30 +61,29 @@ const DashboardOverview: React.FC = () => {
   const stompClientRef = useRef<Client | null>(null);
 
   useEffect(() => {
-const fetchOrders = async () => {
-  try {
-    const jwt = localStorage.getItem("jwt");
-    if (!jwt) {
-      throw new Error("No JWT found. Please log in.");
-    }
-    const response = await axios.get("/api/orders/history", {
-      headers: { Authorization: `Bearer ${jwt}` },
-    });
-    console.log("Dashboard orders response:", response.data);
-    const fetchedOrders: Order[] = response.data;
-    setOrders(fetchedOrders);
-    setLoading(false);
-  } catch (err: any) {
-    console.error("Failed to fetch orders:", err.response?.data || err.message);
-    const errorMessage = err.response?.status === 403
-      ? "Access denied. Please log in again."
-      : err.response?.data?.error || err.message || "Failed to fetch orders";
-    setError(errorMessage);
-    setLoading(false);
-    toast.error(errorMessage); // Add toast notification
-  }
-};
-
+    const fetchOrders = async () => {
+      try {
+        const jwt = localStorage.getItem("jwt");
+        if (!jwt) {
+          throw new Error("No JWT found. Please log in.");
+        }
+        const response = await axios.get("/api/orders/history", {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        console.log("Dashboard orders response:", response.data);
+        const fetchedOrders: Order[] = response.data;
+        setOrders(fetchedOrders);
+        setLoading(false);
+      } catch (err: any) {
+        console.error("Failed to fetch orders:", err.response?.data || err.message);
+        const errorMessage = err.response?.status === 403
+          ? "Access denied. Please log in again."
+          : err.response?.data?.error || err.message || "Failed to fetch orders";
+        setError(errorMessage);
+        setLoading(false);
+        toast.error(errorMessage);
+      }
+    };
 
     const loadWalletData = async () => {
       try {
@@ -101,34 +100,6 @@ const fetchOrders = async () => {
     fetchOrders();
     loadWalletData();
 
-    const socket = new SockJS("http://localhost:8080/ws");
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("WebSocket connected");
-        orders.forEach((order) => {
-          client.subscribe(`/topic/order/${order.trackingNumber}`, (message) => {
-            const update = JSON.parse(message.body);
-            console.log("WebSocket update received:", update);
-            setOrders((prevOrders) =>
-              prevOrders.map((o) =>
-                o.trackingNumber === order.trackingNumber ? { ...o, status: update.status } : o
-              )
-            );
-          });
-        });
-      },
-      onStompError: (frame) => {
-        console.error("WebSocket error:", frame);
-      },
-      onWebSocketClose: () => {
-        console.log("WebSocket disconnected");
-      },
-    });
-    client.activate();
-    stompClientRef.current = client;
-
     return () => {
       if (stompClientRef.current) {
         stompClientRef.current.deactivate();
@@ -136,6 +107,12 @@ const fetchOrders = async () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (wallet && wallet.userId) {
+      setupWebSocket(wallet.userId);
+    }
+  }, [wallet]);
 
   useEffect(() => {
     if (stompClientRef.current && stompClientRef.current.connected) {
@@ -176,6 +153,34 @@ const fetchOrders = async () => {
       }
     };
   }, [orders.length]);
+
+  const setupWebSocket = (userId: number) => {
+    if (stompClientRef.current) {
+      stompClientRef.current.deactivate();
+    }
+
+    const socket = new SockJS("http://localhost:8080/ws");
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log("WebSocket connected for wallet updates in dashboard");
+        client.subscribe(`/topic/wallet/update/${userId}`, (message) => {
+          const updatedWallet: Wallet = JSON.parse(message.body);
+          console.log("WebSocket wallet update received in dashboard:", updatedWallet);
+          setWallet(updatedWallet);
+        });
+      },
+      onStompError: (frame) => {
+        console.error("WebSocket error:", frame);
+      },
+      onWebSocketClose: () => {
+        console.log("WebSocket disconnected");
+      },
+    });
+    client.activate();
+    stompClientRef.current = client;
+  };
 
   const handleToggleWallet = async () => {
     if (!wallet) return;
@@ -297,13 +302,6 @@ const fetchOrders = async () => {
                   >
                     Manage Wallet
                   </Button>
-                  {/* <Button
-                    variant="outline"
-                    className="border-[#ffd215] text-[#0C0E29] hover:bg-[#ffd215]/10"
-                    onClick={() => router.push("/wallet/transactions")}
-                  >
-                    View History
-                  </Button> */}
                   <Button
                     variant={wallet?.isActive ? "destructive" : "default"}
                     className={

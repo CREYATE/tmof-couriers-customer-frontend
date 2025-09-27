@@ -7,6 +7,7 @@ export interface Wallet {
   createdAt: string;
   userEmail: string;
   userName: string;
+  userId?: number; // Added for WebSocket subscription
   error?: string;
 }
 
@@ -99,77 +100,87 @@ class WalletService {
     if (!jwt) {
       throw new Error('No JWT found. Please log in.');
     }
-    
-    try {
-      const response = await axios.post(`${this.baseURL}/deposit/verify`, 
-        { reference }, 
-        { 
-          headers: { 
-            Authorization: `Bearer ${jwt}`,
-            'Content-Type': 'application/json'
-          } 
+
+    const maxRetries = 3;
+    let attempt = 1;
+
+    while (attempt <= maxRetries) {
+      try {
+        console.log(`Attempt ${attempt} to verify deposit with reference: ${reference}`);
+        const response = await axios.post(
+          `${this.baseURL}/deposit/verify`, 
+          { reference }, 
+          { 
+            headers: { 
+              Authorization: `Bearer ${jwt}`,
+              'Content-Type': 'application/json'
+            } 
+          }
+        );
+
+        console.log('Verify deposit response:', response.data);
+
+        if (response.status === 200) {
+          return { success: true };
+        } else {
+          return { 
+            success: false, 
+            error: response.data?.error || 'Verification failed' 
+          };
         }
-      );
-      
-      console.log('Verify deposit response:', response.data);
-      
-      // Handle different response formats
-      if (response.status === 200) {
-        return { success: true };
-      } else {
-        return { 
-          success: false, 
-          error: response.data?.error || 'Verification failed' 
-        };
+      } catch (error: any) {
+        console.error(`Verify deposit attempt ${attempt} failed:`, error);
+        if (attempt === maxRetries) {
+          return { 
+            success: false, 
+            error: error.response?.data?.error || error.response?.data || error.message || 'Verification failed' 
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        attempt++;
       }
-    } catch (error: any) {
-      console.error('Verify deposit error:', error);
-      return { 
-        success: false, 
-        error: error.response?.data?.error || error.response?.data || error.message || 'Verification failed' 
-      };
     }
+
+    return { success: false, error: 'Verification failed after multiple attempts' };
   }
 
-async getTransactionHistory(params: TransactionHistoryRequest = {}): Promise<{
-  content: WalletTransaction[];
-  totalPages: number;
-  totalElements: number;
-}> {
-  const jwt = localStorage.getItem('jwt');
-  if (!jwt) {
-    throw new Error('No JWT found. Please log in.');
-  }
-  
-  try {
-    // Fix: Use the correct endpoint path
-    const response = await axios.get(`${this.baseURL}/transactions`, {
-      headers: { Authorization: `Bearer ${jwt}` },
-      params: {
-        page: params.page || 0,
-        size: params.size || 20,
-        type: params.transactionType,
-      },
-    });
-    
-    if (response.data.error) {
-      throw new Error(response.data.error);
+  async getTransactionHistory(params: TransactionHistoryRequest = {}): Promise<{
+    content: WalletTransaction[];
+    totalPages: number;
+    totalElements: number;
+  }> {
+    const jwt = localStorage.getItem('jwt');
+    if (!jwt) {
+      throw new Error('No JWT found. Please log in.');
     }
     
-    return response.data;
-  } catch (error: any) {
-    console.error('Get transaction history error:', error);
-    
-    // Provide more specific error messages
-    if (error.response?.status === 403) {
-      throw new Error('Access denied. Please log in again.');
-    } else if (error.response?.status === 401) {
-      throw new Error('Authentication required. Please log in.');
+    try {
+      const response = await axios.get(`${this.baseURL}/transactions`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+        params: {
+          page: params.page || 0,
+          size: params.size || 20,
+          type: params.transactionType,
+        },
+      });
+      
+      if (response.data.error) {
+        throw new Error(response.data.error);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Get transaction history error:', error);
+      
+      if (error.response?.status === 403) {
+        throw new Error('Access denied. Please log in again.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in.');
+      }
+      
+      throw new Error(error.response?.data?.error || error.message || 'Failed to fetch transactions');
     }
-    
-    throw new Error(error.response?.data?.error || error.message || 'Failed to fetch transactions');
   }
-}
 
   async toggleWalletStatus(activate: boolean): Promise<Wallet> {
     const jwt = localStorage.getItem('jwt');
