@@ -30,5 +30,5 @@ export default function ConfirmationPage() {
     setOrderData(orderDataFromParams);
   }, [searchParams]);
 
-  return <ConfirmationStep orderData={orderData} onFinish={() => router.push("/orders")} />;
+  return <ConfirmationStep orderData={orderData} onFinish={() => router.push("/orders/all")} />;
 }

@@ -17,12 +17,12 @@ const Stats = ({ stats }: { stats: Stat[] }) => (
         <div className="mb-2">{stat.icon}</div>
         <div className="text-lg font-bold">{stat.title}</div>
         <div className="text-2xl font-extrabold mt-1">{stat.value}</div>
-        <div className="flex items-center gap-2 mt-2">
+        {/* <div className="flex items-center gap-2 mt-2">
           {stat.changeDirection === "up" && <span className="text-green-600">▲</span>}
           {stat.changeDirection === "down" && <span className="text-red-600">▼</span>}
           <span className="text-xs text-gray-500">{stat.changeValue}</span>
         </div>
-        <div className="text-xs text-gray-400 mt-1">{stat.description}</div>
+        <div className="text-xs text-gray-400 mt-1">{stat.description}</div> */}
       </Card>
     ))}
   </div>
