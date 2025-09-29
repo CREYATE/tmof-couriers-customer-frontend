@@ -29,9 +29,9 @@ export default function DashboardHeader({ onNotificationClick, onHamburgerClick 
           <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
           <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500"></span>
         </button> */}
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
+        {/* <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
           {userInitials}
-        </div>
+        </div> */}
       </div>
     </header>
   );
