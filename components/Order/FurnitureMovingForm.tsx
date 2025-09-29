@@ -101,6 +101,13 @@ export default function FurnitureMovingForm({ orderData, onNext, onBack }: Furni
     recipientEmail: orderData.recipientEmail || "",
   });
 
+  useEffect(() => {
+    // Save form data to localStorage whenever it changes
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('furnitureMovingFormData', JSON.stringify(formData));
+    }
+  }, [formData]);
+
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -201,16 +208,27 @@ export default function FurnitureMovingForm({ orderData, onNext, onBack }: Furni
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      // Clear saved form data on successful submission
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('furnitureMovingFormData');
+      }
       onNext(formData);
     }, 1500);
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6">
+    <div className="min-h-screen">
       <TmofSpinner show={loading} />
       
-      <Card className="p-8 shadow-lg">
-        <div className="space-y-10">
+      <div className="text-center mb-6 sm:mb-10 pt-0 sm:pt-0">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#0C0E29] mb-2 flex items-center justify-center gap-2">
+          <Truck className="h-6 w-6 sm:h-8 sm:w-8 text-[#ffd215]" />
+          Furniture Moving Service
+        </h2>
+        <p className="text-sm sm:text-base text-gray-600">Complete the details for your furniture moving requirements</p>
+      </div>
+            
+            <div className="space-y-6 sm:space-y-10">
           {/* Move Type */}
           <section>
             <h3 className="text-lg font-semibold mb-6 flex items-center">
@@ -532,23 +550,22 @@ export default function FurnitureMovingForm({ orderData, onNext, onBack }: Furni
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between mt-8">
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
           <Button
             onClick={onBack}
             variant="outline"
-            className="px-8"
+            className="px-6 py-3 sm:px-8 font-semibold text-base touch-manipulation"
           >
             Back
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={loading || calculating}
-            className="bg-[#ffd215] hover:bg-[#e5bd13] text-black px-8"
+            className="bg-[#ffd215] hover:bg-[#e5bd13] text-black px-6 py-3 sm:px-8 font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
           >
             Continue to Payment
           </Button>
         </div>
-      </Card>
     </div>
   );
 }

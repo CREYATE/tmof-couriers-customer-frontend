@@ -35,8 +35,10 @@ export default function CreateOrderForm() {
   }
 
   return (
-    <div className="max-w-xl mx-auto bg-[#0C0E29]/5 p-8 rounded-lg shadow-lg relative">
-      <TmofSpinner show={showLoader} />
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg relative mt-16 sm:mt-20">
+          <TmofSpinner show={showLoader} />
       {step === 1 && (
         <StepPickupDelivery
           pickup={pickup}
@@ -83,6 +85,7 @@ export default function CreateOrderForm() {
       )}
       {step === 5 && (
         <DeliveryInstructionsStep
+          orderData={{ pickup, delivery, dimensions, weight, itemType, service, sender, receiver }}
           onNext={handleProceedToPayment}
         />
       )}
@@ -101,6 +104,8 @@ export default function CreateOrderForm() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+        </div>
+      </div>
     </div>
   );
 }

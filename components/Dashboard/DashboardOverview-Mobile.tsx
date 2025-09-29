@@ -55,27 +55,7 @@ const DashboardOverview: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [walletLoading, setWalletLoading] = useState(false);
-  const [shipmentsLoading, setShipmentsLoading] = useState(false);
   const stompClientRef = useRef<Client | null>(null);
-
-  const handleWalletLearnMore = () => {
-    setWalletLoading(true);
-    // Simulate loading time for navigation
-    setTimeout(() => {
-      router.push("/dashboard/wallet/under-construction");
-      setWalletLoading(false);
-    }, 800);
-  };
-
-  const handleViewAllShipments = () => {
-    setShipmentsLoading(true);
-    // Simulate loading time for navigation
-    setTimeout(() => {
-      router.push("/orders/all");
-      setShipmentsLoading(false);
-    }, 800);
-  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -235,8 +215,6 @@ const DashboardOverview: React.FC = () => {
     <div className="pt-0 px-3 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-8 max-w-full overflow-hidden">
       <Toaster position="top-right" />
       <TmofSpinner show={loading} />
-      <TmofSpinner show={walletLoading} />
-      <TmofSpinner show={shipmentsLoading} />
       
       {/* Dashboard Header - Mobile Optimized */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -284,10 +262,9 @@ const DashboardOverview: React.FC = () => {
                 <div className="flex justify-center sm:justify-end">
                   <Button
                     className="w-full sm:w-auto bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold px-6 py-2 text-sm sm:text-base touch-manipulation"
-                    onClick={handleWalletLearnMore}
-                    disabled={walletLoading}
+                    onClick={() => router.push("/dashboard/wallet/under-construction")}
                   >
-                    {walletLoading ? "Loading..." : "Learn More"}
+                    Learn More
                   </Button>
                 </div>
               </div>
@@ -308,46 +285,43 @@ const DashboardOverview: React.FC = () => {
                       <p className="text-gray-500 text-center py-8">No recent shipments awaiting collection.</p>
                     ) : (
                       recentAwaitingCollection.map((shipment) => (
-                        <Card key={shipment.id} className="hover:shadow-lg cursor-pointer transition-all duration-200 border border-gray-200 bg-white touch-manipulation">
-                          <CardContent className="p-4 sm:p-6">
-                            <div className="flex items-center justify-between mb-3 sm:mb-4">
-                              <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate mr-2">{shipment.customerName || "Customer"}</h3>
-                              <Badge className={`${getStatusBadgeColor(shipment.status)} text-xs sm:text-sm px-2 py-1 rounded-full`}>
-                                {getStatusLabel(shipment.status)}
-                              </Badge>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700">Tracking:</span>
-                                  <span className="text-xs sm:text-sm text-gray-900 font-mono">#{shipment.trackingNumber}</span>
+                        <Card key={shipment.id} className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-sm font-medium text-gray-900">#{shipment.trackingNumber}</span>
+                                  <Badge className={getStatusBadgeColor(shipment.status)}>
+                                    {getStatusLabel(shipment.status)}
+                                  </Badge>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <Package className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                                  <span className="text-xs sm:text-sm text-gray-600 truncate">{shipment.pickupAddress}</span>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs text-gray-500 font-medium min-w-[60px]">From:</span>
+                                    <span className="text-xs text-gray-700 break-words">{shipment.pickupAddress}</span>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs text-gray-500 font-medium min-w-[60px]">To:</span>
+                                    <span className="text-xs text-gray-700 break-words">{shipment.deliveryAddress}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-[#ffd215] flex-shrink-0" />
+                                    <div className="text-xs text-gray-600">
+                                      <span className="font-medium">Created: </span>
+                                      <span>{new Date(shipment.createdAt).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}</span>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs sm:text-sm font-medium text-gray-700">Service:</span>
-                                  <span className="text-xs sm:text-sm text-gray-900">{shipment.serviceType}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Truck className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                                  <span className="text-xs sm:text-sm text-gray-600 truncate">{shipment.deliveryAddress}</span>
-                                </div>
+                              <div className="flex items-center justify-between sm:justify-end gap-3">
+                                <span className="text-lg font-bold text-gray-900">R{shipment.price.toFixed(2)}</span>
                               </div>
-                            </div>
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
-                                <span className="text-xs sm:text-sm text-gray-500">
-                                  {new Date(shipment.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                              <span className="text-sm sm:text-base font-bold text-[#0C0E29]">
-                                R{shipment.price.toFixed(2)}
-                              </span>
                             </div>
                           </CardContent>
                         </Card>
@@ -358,10 +332,9 @@ const DashboardOverview: React.FC = () => {
                     <Button
                       variant="default"
                       className="w-full sm:w-auto bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold px-8 py-2 touch-manipulation"
-                      onClick={handleViewAllShipments}
-                      disabled={shipmentsLoading}
+                      onClick={() => router.push("/orders/all")}
                     >
-                      {shipmentsLoading ? "Loading..." : "View all shipments"}
+                      View all shipments
                     </Button>
                   </div>
                 </CardContent>

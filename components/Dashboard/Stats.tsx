@@ -11,21 +11,37 @@ interface Stat {
 }
 
 const Stats = ({ stats }: { stats: Stat[] }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    {stats.map((stat, idx) => (
-      <Card key={idx} className="p-4 flex flex-col items-center justify-center">
-        <div className="mb-2">{stat.icon}</div>
-        <div className="text-lg font-bold">{stat.title}</div>
-        <div className="text-2xl font-extrabold mt-1">{stat.value}</div>
-        {/* <div className="flex items-center gap-2 mt-2">
-          {stat.changeDirection === "up" && <span className="text-green-600">▲</span>}
-          {stat.changeDirection === "down" && <span className="text-red-600">▼</span>}
-          <span className="text-xs text-gray-500">{stat.changeValue}</span>
-        </div>
-        <div className="text-xs text-gray-400 mt-1">{stat.description}</div> */}
-      </Card>
-    ))}
-  </div>
+  <>
+    {/* Mobile: Horizontal scroll */}
+    <div className="md:hidden">
+      <div className="flex gap-4 overflow-x-auto pb-4 px-1 scrollbar-hide">
+        {stats.map((stat, idx) => (
+          <Card key={idx} className="min-w-[280px] flex-shrink-0 p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="p-0 flex flex-col items-center justify-center text-center">
+              <div className="mb-3 p-3 rounded-full bg-[#ffd215]/10">{stat.icon}</div>
+              <div className="text-sm font-medium text-gray-600 mb-1">{stat.title}</div>
+              <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
+              <div className="text-xs text-gray-500">{stat.description}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+    
+    {/* Desktop: Grid layout */}
+    <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6">
+      {stats.map((stat, idx) => (
+        <Card key={idx} className="p-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-0 flex flex-col items-center justify-center text-center">
+            <div className="mb-3 p-3 rounded-full bg-[#ffd215]/10">{stat.icon}</div>
+            <div className="text-sm font-medium text-gray-600 mb-1">{stat.title}</div>
+            <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
+            <div className="text-xs text-gray-500">{stat.description}</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </>
 );
 
 export default Stats;

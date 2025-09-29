@@ -77,55 +77,101 @@ export default function SignupForm() {
 
   return (
     <GoogleOAuthProvider clientId="271708094220-rfusl4se011i83q11uc18ephe5kog4ve.apps.googleusercontent.com">
-      <form onSubmit={handleSignup} className="w-full max-w-md space-y-6 bg-white rounded-lg shadow-lg p-8 border-t-4 border-t-[#ffd215]">
-        <div className="flex justify-center mb-6">
-          <img src="/tmof logo.png" alt="TMOF Couriers Logo" className="h-12" />
+      <form onSubmit={handleSignup} className="w-full max-w-sm sm:max-w-md space-y-4 sm:space-y-6 bg-white rounded-xl shadow-xl p-6 sm:p-8 border-t-4 border-t-[#ffd215] mx-auto">
+        <div className="flex justify-center mb-4 sm:mb-6">
+          <img src="/tmof logo.png" alt="TMOF Couriers Logo" className="h-10 sm:h-12" />
         </div>
-        <h2 className="text-2xl font-bold text-center mb-2">Sign Up</h2>
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        <div className="space-y-2">
-          <Label htmlFor="name">First Name</Label>
-          <div className="relative">
-            <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <Input
-              id="name"
-              type="text"
-              placeholder="John"
-              className="pl-10"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
-            />
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-2 text-[#0C0E29]">Sign Up</h2>
+        {error && <p className="text-red-500 text-center text-sm sm:text-base bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm sm:text-base font-semibold text-[#0C0E29]">First Name</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <Input
+                id="name"
+                type="text"
+                placeholder="John"
+                className="pl-10 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="surname" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Last Name</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+              <Input
+                id="surname"
+                type="text"
+                placeholder="Doe"
+                className="pl-10 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+                value={surname}
+                onChange={e => setSurname(e.target.value)}
+                required
+              />
+            </div>
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="surname">Last Name</Label>
+          <Label htmlFor="email" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Email</Label>
           <div className="relative">
-            <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <Input
-              id="surname"
-              type="text"
-              placeholder="Doe"
-              className="pl-10"
-              value={surname}
-              onChange={e => setSurname(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+            <Mail className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             <Input
               id="email"
               type="email"
               placeholder="your@email.com"
-              className="pl-10"
+              className="pl-10 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
             />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              className="pl-10 pr-12 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 sm:top-2.5 text-gray-400 hover:text-gray-600 touch-manipulation p-1"
+            >
+              {showPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Confirm Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? 'text' : 'password'}
+              className="pl-10 pr-12 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-3 sm:top-2.5 text-gray-400 hover:text-gray-600 touch-manipulation p-1"
+            >
+              {showConfirmPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
+            </button>
           </div>
         </div>
         <div className="space-y-2">
@@ -175,7 +221,7 @@ export default function SignupForm() {
         </div>
         <Button
           type="submit"
-          className="w-full bg-[#ffd215] hover:bg-[#e5bd13] text-black"
+          className="w-full bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold py-3 sm:py-2.5 text-base sm:text-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
           disabled={isLoading}
         >
           {isLoading ? 'Signing Up...' : 'Sign Up'}
@@ -183,21 +229,23 @@ export default function SignupForm() {
         <div className="flex flex-col gap-3 pt-2">
           <div className="flex items-center my-2">
             <div className="flex-grow h-px bg-gray-200" />
-            <span className="mx-3 text-xs text-gray-400">or continue with</span>
+            <span className="mx-3 text-xs sm:text-sm text-gray-400">or continue with</span>
             <div className="flex-grow h-px bg-gray-200" />
           </div>
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            theme="outline"
-            size="large"
-            text="signup_with"
-            shape="rectangular"
-            width="400"
-          />
-          <div className="text-center text-sm text-gray-600">
+          <div className="w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="signup_with"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
+          <div className="text-center text-sm sm:text-base text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="text-tmof-red font-semibold hover:underline">Sign in</Link>
+            <Link href="/login" className="text-[#0C0E29] font-semibold hover:underline hover:text-[#ffd215] transition-colors">Sign in</Link>
           </div>
         </div>
       </form>

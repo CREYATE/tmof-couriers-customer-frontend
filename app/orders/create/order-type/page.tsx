@@ -21,7 +21,7 @@ export default function OrderTypePage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-6 bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen">
       <div className="w-full max-w-2xl">
         <OrderTypeStep onNext={handleNext} />
       </div>

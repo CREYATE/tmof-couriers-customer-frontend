@@ -22,26 +22,38 @@ export default function StepPickupDelivery({ pickup, setPickup, delivery, setDel
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <TmofSpinner show={loading} />
-      <h2 className="font-bold text-xl text-[#ffd215]">Pickup & Delivery Details</h2>
-      <div className="flex flex-col gap-4">
-        <input
-          type="text"
-          className="input"
-          placeholder="Pickup Address"
-          value={pickup}
-          onChange={e => setPickup(e.target.value)}
-        />
-        <input
-          type="text"
-          className="input"
-          placeholder="Delivery Address"
-          value={delivery}
-          onChange={e => setDelivery(e.target.value)}
-        />
+      <h2 className="font-bold text-xl sm:text-2xl text-[#0C0E29] mb-6">Pickup & Delivery Details</h2>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Pickup Address</label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 sm:py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent text-base sm:text-lg touch-manipulation"
+            placeholder="Enter pickup address"
+            value={pickup}
+            onChange={e => setPickup(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Delivery Address</label>
+          <input
+            type="text"
+            className="w-full px-4 py-3 sm:py-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent text-base sm:text-lg touch-manipulation"
+            placeholder="Enter delivery address"
+            value={delivery}
+            onChange={e => setDelivery(e.target.value)}
+          />
+        </div>
       </div>
-      <button className="bg-[#ffd215] px-6 py-2 rounded font-bold" onClick={handleNext}>Next</button>
+      <button 
+        className="w-full bg-[#ffd215] hover:bg-[#e5bd13] text-black px-6 py-4 rounded-xl font-semibold text-lg transition-colors touch-manipulation shadow-lg hover:shadow-xl" 
+        onClick={handleNext}
+        disabled={!pickup || !delivery}
+      >
+        Next
+      </button>
     </div>
   );
 }

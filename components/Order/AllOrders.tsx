@@ -127,58 +127,61 @@ const AllOrders: React.FC = () => {
   };
 
   const renderOrders = (orders: Order[], title: string) => (
-    <div className="mb-8">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 border-b border-gray-200 pb-3">{title}</h2>
+    <div className="mb-6 sm:mb-8">
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900 border-b border-gray-200 pb-3">{title}</h2>
       {orders.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No {title.toLowerCase()}</h3>
-            <p className="text-gray-500 text-center mb-6">
+        <Card className="mx-0">
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+            <Package className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-4" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 text-center">No {title.toLowerCase()}</h3>
+            <p className="text-sm sm:text-base text-gray-500 text-center mb-6">
               No {title.toLowerCase()} found. Create a new order to get started.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-3 sm:space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg cursor-pointer transition-all duration-200 border border-gray-200 bg-white" onClick={() => handleOrderClick(order)}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg text-gray-900">{order.customerName || "Customer"}</h3>
-                  <Badge className={getStatusBadgeColor(order.status)}>
+            <Card key={order.id} className="hover:shadow-lg cursor-pointer transition-all duration-200 border border-gray-200 bg-white touch-manipulation" onClick={() => handleOrderClick(order)}>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate mr-2">{order.customerName || "Customer"}</h3>
+                  <Badge className={`${getStatusBadgeColor(order.status)} text-xs sm:text-sm px-2 py-1 rounded-full`}>
                     {getStatusLabel(order.status)}
                   </Badge>
                 </div>
-                <div className="space-y-3 text-sm text-gray-600">
+                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-gray-600">
                   <div className="flex items-center">
-                    <Package className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                    <span className="font-medium">{order.trackingNumber}</span>
+                    <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3 text-[#ffd215] flex-shrink-0" />
+                    <span className="font-medium text-xs sm:text-sm">{order.trackingNumber}</span>
                   </div>
                   <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900 mb-1">From</p>
-                      <p className="text-sm text-gray-600">{order.pickupAddress}</p>
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">From</p>
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">{order.pickupAddress}</p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <MapPin className="h-4 w-4 mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900 mb-1">To</p>
-                      <p className="text-sm text-gray-600">{order.deliveryAddress}</p>
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 mb-1 text-xs sm:text-sm">To</p>
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">{order.deliveryAddress}</p>
                     </div>
                   </div>
-                  <div className="flex items-center">
-                    <Clock className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                    <span>
-                      {new Date(order.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 sm:mr-3 text-[#ffd215] flex-shrink-0" />
+                      <span className="text-xs sm:text-sm">
+                        {new Date(order.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <span className="font-semibold text-sm sm:text-base text-[#0C0E29]">R{order.price}</span>
                   </div>
                 </div>
               </CardContent>
@@ -190,19 +193,19 @@ const AllOrders: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl space-y-6">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Order History</h1>
+    <div className="min-h-screen">
+      <div className="max-w-6xl mx-auto space-y-6 pt-0 sm:pt-20">
+        {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Order History</h1>
           <Button
             type="button"
             onClick={() => router.push("/orders/create/order-type")}
-            className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2 font-medium px-6 py-2"
+            className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2 font-semibold px-4 py-3 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base touch-manipulation shadow-lg hover:shadow-xl transition-all duration-200"
           >
             <Package className="h-5 w-5 text-black" />
             Create New Order
           </Button>
-        </div>
+        </div> */}
       {loading ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -223,17 +226,17 @@ const AllOrders: React.FC = () => {
       )}
       {selectedOrder && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4"
           onClick={handleCloseModal}
         >
           <div
-            className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6 relative border border-gray-200"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-auto p-4 sm:p-6 relative border border-gray-200 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-light" onClick={handleCloseModal}>
+            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl font-light touch-manipulation" onClick={handleCloseModal}>
               &times;
             </button>
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 pr-8">Order Details</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-gray-900 pr-8">Order Details</h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-4 border-b border-gray-200">
                 <span className="font-semibold text-lg text-gray-900">{selectedOrder.customerName || "Customer"}</span>
@@ -244,35 +247,35 @@ const AllOrders: React.FC = () => {
               <div className="space-y-3 text-sm">
                 <div className="flex items-center">
                   <Package className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                  <span className="text-gray-700">{selectedOrder.trackingNumber}</span>
+                  <span className="text-gray-700 text-sm sm:text-base">{selectedOrder.trackingNumber}</span>
                 </div>
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-gray-900">From: </span>
-                    <span className="text-gray-700">{selectedOrder.pickupAddress}</span>
+                <div className="flex items-start">
+                  <MapPin className="h-4 w-4 mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 text-sm sm:text-base">From: </span>
+                    <span className="text-gray-700 text-sm sm:text-base break-words">{selectedOrder.pickupAddress}</span>
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-gray-900">To: </span>
-                    <span className="text-gray-700">{selectedOrder.deliveryAddress}</span>
+                <div className="flex items-start">
+                  <MapPin className="h-4 w-4 mr-3 text-[#ffd215] mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900 text-sm sm:text-base">To: </span>
+                    <span className="text-gray-700 text-sm sm:text-base break-words">{selectedOrder.deliveryAddress}</span>
                   </div>
                 </div>
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 mr-3 text-[#ffd215] flex-shrink-0" />
-                  <span className="text-gray-700">{new Date(selectedOrder.createdAt).toLocaleString()}</span>
+                  <span className="text-gray-700 text-sm sm:text-base">{new Date(selectedOrder.createdAt).toLocaleString()}</span>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="bg-gray-50 p-3 sm:p-4 rounded-xl">
+                  <div className="space-y-2 text-sm sm:text-base">
                     <div>
                       <span className="font-medium text-gray-900">Total: </span>
                       <span className="text-gray-700 font-semibold">R{selectedOrder.price}</span>
                     </div>
                     <div>
                       <span className="font-medium text-gray-900">Recipient: </span>
-                      <span className="text-gray-700">{selectedOrder.recipientName} ({selectedOrder.recipientPhone})</span>
+                      <span className="text-gray-700 break-words">{selectedOrder.recipientName} ({selectedOrder.recipientPhone})</span>
                     </div>
                     <div>
                       <span className="font-medium text-gray-900">Service Type: </span>
@@ -283,24 +286,24 @@ const AllOrders: React.FC = () => {
               </div>
             </div>
             {selectedOrder.status === "IN_TRANSIT" && (
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={() => alert("Reschedule logic here")}
                 >
                   Reschedule
                 </Button>
                 <Button
                   type="button"
-                  className="bg-red-600 hover:bg-red-700 text-white flex-1 font-medium"
+                  className="bg-red-600 hover:bg-red-700 text-white flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={() => alert("Cancel logic here")}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="button"
-                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium"
+                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={() => handleTrackOrder(selectedOrder.trackingNumber)}
                 >
                   <Truck className="h-4 w-4 mr-2 text-black inline" /> Track
@@ -308,17 +311,17 @@ const AllOrders: React.FC = () => {
               </div>
             )}
             {["AWAITING_COLLECTION", "PAID"].includes(selectedOrder.status) && (
-              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
-                  className="bg-red-600 hover:bg-red-700 text-white flex-1 font-medium"
+                  className="bg-red-600 hover:bg-red-700 text-white flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={handleCancelRefund}
                 >
                   <AlertTriangle className="h-4 w-4 mr-2 text-white inline" /> Cancel & Refund
                 </Button>
                 <Button
                   type="button"
-                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium"
+                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={() => handleTrackOrder(selectedOrder.trackingNumber)}
                 >
                   <Truck className="h-4 w-4 mr-2 text-black inline" /> Track
@@ -329,7 +332,7 @@ const AllOrders: React.FC = () => {
               <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
-                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium"
+                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium py-3 px-4 rounded-xl touch-manipulation"
                   onClick={() => handleTrackOrder(selectedOrder.trackingNumber)}
                 >
                   <Truck className="h-4 w-4 mr-2 text-black inline" /> Track

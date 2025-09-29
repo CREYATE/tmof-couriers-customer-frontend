@@ -142,4 +142,13 @@
   .text-tmof-red {
     color: #E51E2A !important;
   }
+
+  /* Mobile Scroll Utilities */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

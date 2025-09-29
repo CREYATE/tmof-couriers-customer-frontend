@@ -78,21 +78,21 @@ export default function LoginForm() {
 
     return (
         <GoogleOAuthProvider clientId="271708094220-rfusl4se011i83q11uc18ephe5kog4ve.apps.googleusercontent.com">
-            <form onSubmit={handleLogin} className="w-full max-w-md space-y-6 bg-white rounded-lg shadow-lg p-8 border-t-4 border-t-[#ffd215]">
-                <div className="flex justify-center mb-6">
-                    <img src="/tmof logo.png" alt="TMOF Couriers Logo" className="h-12" />
+            <form onSubmit={handleLogin} className="w-full max-w-sm sm:max-w-md space-y-4 sm:space-y-6 bg-white rounded-xl shadow-xl p-6 sm:p-8 border-t-4 border-t-[#ffd215] mx-auto">
+                <div className="flex justify-center mb-4 sm:mb-6">
+                    <img src="/tmof logo.png" alt="TMOF Couriers Logo" className="h-10 sm:h-12" />
                 </div>
-                <h2 className="text-2xl font-bold text-center mb-2">Sign In</h2>
-                {error && <p className="text-red-500 text-center">{error}</p>}
+                <h2 className="text-xl sm:text-2xl font-bold text-center mb-2 text-[#0C0E29]">Sign In</h2>
+                {error && <p className="text-red-500 text-center text-sm sm:text-base bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Email</Label>
                     <div className="relative">
-                        <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                        <Mail className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                         <Input
                             id="email"
                             type="email"
                             placeholder="your@email.com"
-                            className="pl-10"
+                            className="pl-10 sm:pl-10 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
                             required
@@ -100,13 +100,13 @@ export default function LoginForm() {
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password" className="text-sm sm:text-base font-semibold text-[#0C0E29]">Password</Label>
                     <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                        <Lock className="absolute left-3 top-3 sm:top-2.5 h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                         <Input
                             id="password"
                             type={showPassword ? 'text' : 'password'}
-                            className="pl-10 pr-10"
+                            className="pl-10 pr-12 py-3 sm:py-2.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
                             placeholder="••••••••"
                             value={password}
                             onChange={e => setPassword(e.target.value)}
@@ -115,15 +115,15 @@ export default function LoginForm() {
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                            className="absolute right-3 top-3 sm:top-2.5 text-gray-400 hover:text-gray-600 touch-manipulation p-1"
                         >
-                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                            {showPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
                         </button>
                     </div>
                 </div>
                 <Button
                     type="submit"
-                    className="w-full bg-[#ffd215] hover:bg-[#e6bd13] text-black"
+                    className="w-full bg-[#ffd215] hover:bg-[#e6bd13] text-black font-semibold py-3 sm:py-2.5 text-base sm:text-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
                     disabled={isLoading}
                 >
                     {isLoading ? 'Signing In...' : 'Sign In'}
@@ -131,21 +131,23 @@ export default function LoginForm() {
                 <div className="flex flex-col gap-3 pt-2">
                     <div className="flex items-center my-2">
                         <div className="flex-grow h-px bg-gray-200" />
-                        <span className="mx-3 text-xs text-gray-400">or continue with</span>
+                        <span className="mx-3 text-xs sm:text-sm text-gray-400">or continue with</span>
                         <div className="flex-grow h-px bg-gray-200" />
                     </div>
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleError}
-                        theme="outline"
-                        size="large"
-                        text="signin_with"
-                        shape="rectangular"
-                        width="400"
-                    />
-                    <div className="text-center text-sm text-gray-600">
+                    <div className="w-full">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleError}
+                            theme="outline"
+                            size="large"
+                            text="signin_with"
+                            shape="rectangular"
+                            width="100%"
+                        />
+                    </div>
+                    <div className="text-center text-sm sm:text-base text-gray-600">
                         Don't have an account?{' '}
-                        <Link href="/signup" className="text-tmof-red font-semibold hover:underline">Sign up</Link>
+                        <Link href="/signup" className="text-[#0C0E29] font-semibold hover:underline hover:text-[#ffd215] transition-colors">Sign up</Link>
                     </div>
                 </div>
             </form>

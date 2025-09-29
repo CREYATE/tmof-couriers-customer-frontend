@@ -5,21 +5,44 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calculator } from "lucide-react";
+import { Calculator, ArrowLeft } from "lucide-react";
 import axios from 'axios';
 import debounce from 'lodash/debounce';
 
 export default function DeliveryStep({ serviceType, onNext }: { serviceType: string; onNext: (data: any) => void }) {
   const router = useRouter();
   const queryServiceType = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('serviceType') || serviceType || 'STANDARD';
-  const [formData, setFormData] = useState({
-    pickupAddress: "",
-    deliveryAddress: "",
-    weight: "",
-    distance: "",
-    description: "",
-    serviceType: queryServiceType,
-    price: 0,
+  const [formData, setFormData] = useState(() => {
+    // Try to restore form data from localStorage
+    if (typeof window !== 'undefined') {
+      const savedData = localStorage.getItem('deliveryStepFormData');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          return {
+            pickupAddress: "",
+            deliveryAddress: "",
+            weight: "",
+            distance: "",
+            description: "",
+            serviceType: queryServiceType,
+            price: 0,
+            ...parsed
+          };
+        } catch (error) {
+          console.error('Failed to parse saved delivery form data:', error);
+        }
+      }
+    }
+    return {
+      pickupAddress: "",
+      deliveryAddress: "",
+      weight: "",
+      distance: "",
+      description: "",
+      serviceType: queryServiceType,
+      price: 0,
+    };
   });
   const [isCalculating, setIsCalculating] = useState(false);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
@@ -61,7 +84,7 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
       const price = Number(response.data.price); // Convert BigDecimal string to number
 
       setEstimatedPrice(price);
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         distance: distanceKm,
         price: price,
@@ -114,7 +137,7 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
             const place = pickupAutocomplete.getPlace();
             if (place.formatted_address) {
               console.log('Pickup selected:', place.formatted_address);
-              setFormData(prev => ({ ...prev, pickupAddress: place.formatted_address }));
+              setFormData((prev: any) => ({ ...prev, pickupAddress: place.formatted_address }));
               setIsPickupValid(true);
             } else {
               setIsPickupValid(false);
@@ -125,7 +148,7 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
             const place = deliveryAutocomplete.getPlace();
             if (place.formatted_address) {
               console.log('Delivery selected:', place.formatted_address);
-              setFormData(prev => ({ ...prev, deliveryAddress: place.formatted_address }));
+              setFormData((prev: any) => ({ ...prev, deliveryAddress: place.formatted_address }));
               setIsDeliveryValid(true);
             } else {
               setIsDeliveryValid(false);
@@ -150,7 +173,7 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
   }, [mapsLoaded, isPickupValid, isDeliveryValid, formData.weight, formData.serviceType]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
     if (field === 'pickupAddress') setIsPickupValid(false);
     if (field === 'deliveryAddress') setIsDeliveryValid(false);
   };
@@ -160,96 +183,139 @@ export default function DeliveryStep({ serviceType, onNext }: { serviceType: str
   };
 
   return (
-    <Card className="max-w-md mx-auto mt-8 p-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Calculator className="h-5 w-5" />
-          Delivery Details
-        </CardTitle>
-        <CardDescription>
-          Select your delivery details to get an instant estimate
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {error && <p className="text-red-500">{error}</p>}
-        {!mapsLoaded && <p>Loading Google Maps...</p>}
-        <div>
-          <Label htmlFor="pickup-address">Pickup Address *</Label>
-          <Input
-            id="pickup-address"
-            ref={pickupInputRef}
-            placeholder="Start typing pickup address..."
-            value={formData.pickupAddress}
-            onChange={e => handleInputChange('pickupAddress', e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="delivery-address">Delivery Address *</Label>
-          <Input
-            id="delivery-address"
-            ref={deliveryInputRef}
-            placeholder="Start typing delivery address..."
-            value={formData.deliveryAddress}
-            onChange={e => handleInputChange('deliveryAddress', e.target.value)}
-            required
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="weight">Weight (kg)</Label>
-            <Input
-              id="weight"
-              type="number"
-              placeholder="e.g., 2.5 (default: 1kg)"
-              value={formData.weight}
-              onChange={e => handleInputChange('weight', e.target.value)}
-              min="0.1"
-              max="1000"
-              step="0.1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Leave empty to use default weight (1kg)
-            </p>
-          </div>
-          <div>
-            <Label htmlFor="distance">Distance (km)</Label>
-            <Input
-              id="distance"
-              type="text"
-              value={formData.distance}
-              readOnly
-              placeholder="Auto-calculated"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Distance is calculated automatically
-            </p>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="description">Item Description (Optional)</Label>
-          <Textarea
-            id="description"
-            placeholder="Describe your package..."
-            value={formData.description}
-            onChange={e => handleInputChange('description', e.target.value)}
-            maxLength={1000}
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/1000 characters
-          </p>
-        </div>
-        <div className="bg-[#ffd215] rounded-lg p-4 text-black font-bold text-center mb-4">
-          {isCalculating ? 'Calculating...' : estimatedPrice !== null ? `Estimated Price: R${estimatedPrice.toFixed(2)}` : 'Select valid addresses to get an estimate'}
-        </div>
-        <Button
-          onClick={handleProceed}
-          className="bg-[#ffd215] hover:bg-[#e5bd13] text-black w-full"
-          disabled={isCalculating || !estimatedPrice || !isPickupValid || !isDeliveryValid}
-        >
-          Proceed to Delivery Instructions
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="min-h-screen">
+      <div className="min-h-screen">
+        <Card className="w-full bg-white">
+          <CardHeader className="text-center space-y-2 p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-bold text-[#0C0E29] flex items-center justify-center gap-2">
+              <Calculator className="h-6 w-6 sm:h-8 sm:w-8 text-[#ffd215]" />
+              Delivery Details
+            </CardTitle>
+            <CardDescription className="text-sm sm:text-base text-gray-600">
+              Enter pickup and delivery information to calculate your quote
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 lg:p-8 space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm sm:text-base">
+                {error}
+              </div>
+            )}
+            {!mapsLoaded && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-xl text-sm sm:text-base">
+                Loading Google Maps...
+              </div>
+            )}
+            <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="pickup-address" className="text-sm font-semibold text-[#0C0E29]">Pickup Address *</Label>
+                <Input
+                  id="pickup-address"
+                  ref={pickupInputRef}
+                  placeholder="Start typing pickup address..."
+                  value={formData.pickupAddress}
+                  onChange={e => handleInputChange('pickupAddress', e.target.value)}
+                  className="w-full px-4 py-3 sm:py-4 text-base sm:text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="delivery-address" className="text-sm font-semibold text-[#0C0E29]">Delivery Address *</Label>
+                <Input
+                  id="delivery-address"
+                  ref={deliveryInputRef}
+                  placeholder="Start typing delivery address..."
+                  value={formData.deliveryAddress}
+                  onChange={e => handleInputChange('deliveryAddress', e.target.value)}
+                  className="w-full px-4 py-3 sm:py-4 text-base sm:text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="weight" className="text-sm font-semibold text-[#0C0E29]">Weight (kg)</Label>
+                  <Input
+                    id="weight"
+                    type="number"
+                    placeholder="e.g., 2.5 (default: 1kg)"
+                    value={formData.weight}
+                    onChange={e => handleInputChange('weight', e.target.value)}
+                    min="0.1"
+                    max="1000"
+                    step="0.1"
+                    className="w-full px-4 py-3 sm:py-4 text-base sm:text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent touch-manipulation"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Leave empty to use default weight (1kg)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="distance" className="text-sm font-semibold text-[#0C0E29]">Distance (km)</Label>
+                  <Input
+                    id="distance"
+                    type="text"
+                    value={formData.distance}
+                    readOnly
+                    placeholder="Auto-calculated"
+                    className="w-full px-4 py-3 sm:py-4 text-base sm:text-lg border border-gray-300 rounded-xl bg-gray-50 text-gray-700"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Distance is calculated automatically
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-semibold text-[#0C0E29]">Item Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your package..."
+                  value={formData.description}
+                  onChange={e => handleInputChange('description', e.target.value)}
+                  maxLength={1000}
+                  rows={4}
+                  className="w-full px-4 py-3 text-base sm:text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#ffd215] focus:border-transparent resize-none touch-manipulation"
+                />
+                <p className="text-xs text-gray-500">
+                  {formData.description.length}/1000 characters
+                </p>
+              </div>
+              <div className="bg-[#ffd215]/10 border border-[#ffd215] rounded-xl p-4 sm:p-6 text-center">
+                <div className="text-lg sm:text-xl font-bold text-[#0C0E29]">
+                  {isCalculating ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#ffd215]"></div>
+                      Calculating...
+                    </div>
+                  ) : estimatedPrice !== null ? (
+                    <div>
+                      <span className="text-sm sm:text-base text-gray-600 block mb-1">Estimated Price</span>
+                      <span className="text-2xl sm:text-3xl text-[#ffd215]">R{estimatedPrice.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm sm:text-base text-gray-600">Select valid addresses to get an estimate</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
+                <Button
+                  onClick={() => router.back()}
+                  variant="outline"
+                  className="px-6 py-3 sm:px-8 font-semibold text-base touch-manipulation"
+                >
+                  Back
+                </Button>
+                <Button
+                  onClick={handleProceed}
+                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold text-base sm:text-lg py-4 sm:py-5 px-6 sm:px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
+                  disabled={isCalculating || !estimatedPrice || !isPickupValid || !isDeliveryValid}
+                >
+                  Proceed to Delivery Instructions
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
