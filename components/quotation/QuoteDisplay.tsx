@@ -1,8 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Package, Clock, Truck } from "lucide-react";
+import { MapPin, Package, Clock, Truck, Home } from "lucide-react";
 
 interface QuoteDisplayProps {
-  quotation: any;
+  quotation: {
+    serviceType: string;
+    pickupAddress: string;
+    deliveryAddress: string;
+    weight: number;
+    distance: number;
+    itemValue?: number;
+    description?: string;
+    price: number;
+    baseFee: number;
+    trailerFee?: number;
+    includeTrailer?: boolean;
+    totalCost: number;
+  } | null;
 }
 
 export const QuoteDisplay = ({ quotation }: QuoteDisplayProps) => {
@@ -12,6 +25,7 @@ export const QuoteDisplay = ({ quotation }: QuoteDisplayProps) => {
       case 'same-day': return <Clock className="h-5 w-5" />;
       case 'swift-errand': return <Package className="h-5 w-5" />;
       case 'instant': return <Truck className="h-5 w-5" />;
+      case 'furniture-moving': return <Home className="h-5 w-5" />;
       default: return <Package className="h-5 w-5" />;
     }
   };
@@ -22,6 +36,7 @@ export const QuoteDisplay = ({ quotation }: QuoteDisplayProps) => {
       case 'same-day': return 'R80 base (10km included) + R4/km + R4/kg';
       case 'swift-errand': return 'Shopping service • R150 min or 10%';
       case 'instant': return 'R80 base + R5.50/km • Premium';
+      case 'furniture-moving': return 'R450 base + R25/km • Trailer +R450';
       default: return '';
     }
   };
@@ -55,32 +70,28 @@ export const QuoteDisplay = ({ quotation }: QuoteDisplayProps) => {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span>Base Fee:</span>
-            <span>R{quotation.base_fee?.toFixed(2) || '0.00'}</span>
+            <span>R{quotation.baseFee?.toFixed(2) || '0.00'}</span>
           </div>
           <div className="flex justify-between">
-            <span>Distance Fee:</span>
-            <span>R{quotation.distance_fee?.toFixed(2) || '0.00'}</span>
+            <span>Distance & Weight Fee:</span>
+            <span>R{quotation.price?.toFixed(2) || '0.00'}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Weight Fee:</span>
-            <span>R{quotation.weight_fee?.toFixed(2) || '0.00'}</span>
-          </div>
-          {quotation.service_fee > 0 && (
-            <div className="flex justify-between">
-              <span>Service Fee:</span>
-              <span>R{quotation.service_fee?.toFixed(2)}</span>
+          {quotation.includeTrailer && quotation.trailerFee && quotation.trailerFee > 0 && (
+            <div className="flex justify-between text-blue-600">
+              <span>Trailer Fee:</span>
+              <span>R{quotation.trailerFee.toFixed(2)}</span>
             </div>
           )}
-          {quotation.peak_multiplier > 1 && (
-            <div className="flex justify-between text-orange-600">
-              <span>Peak Hours (20%):</span>
-              <span>+R{((quotation.total_amount / quotation.peak_multiplier) * 0.2).toFixed(2)}</span>
+          {quotation.itemValue && quotation.itemValue > 0 && (
+            <div className="flex justify-between">
+              <span>Item Value:</span>
+              <span>R{quotation.itemValue.toFixed(2)}</span>
             </div>
           )}
           <hr className="border-[#ffd215]" />
           <div className="flex justify-between font-bold text-lg text-[#0C0E29]">
-            <span>Total Amount:</span>
-            <span>R{quotation.total_amount?.toFixed(2)}</span>
+            <span>Total Cost:</span>
+            <span>R{quotation.totalCost?.toFixed(2) || quotation.price?.toFixed(2) || '0.00'}</span>
           </div>
         </div>
 
@@ -98,6 +109,9 @@ export const QuoteDisplay = ({ quotation }: QuoteDisplayProps) => {
             <p><strong>Distance:</strong> {quotation.distance}km</p>
             <p><strong>Weight:</strong> {quotation.weight}kg</p>
           </div>
+          {quotation.description && (
+            <p className="mt-2"><strong>Description:</strong> {quotation.description}</p>
+          )}
         </div>
       </CardContent>
     </Card>

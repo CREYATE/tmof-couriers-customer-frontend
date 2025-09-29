@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, MapPin, Clock, Truck } from "lucide-react";
+import { Package, MapPin, Clock, Truck, X, AlertTriangle } from "lucide-react";
 import axios from "axios";
 
 interface Order {
@@ -67,6 +67,7 @@ const AllOrders: React.FC = () => {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [oldOrders, setOldOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +112,14 @@ const AllOrders: React.FC = () => {
 
   const handleCloseModal = () => {
     setSelectedOrder(null);
+  };
+
+  const handleCancelRefund = () => {
+    setShowCancellationPolicy(true);
+  };
+
+  const handleCloseCancellationPolicy = () => {
+    setShowCancellationPolicy(false);
   };
 
   const handleTrackOrder = (trackingNumber: string) => {
@@ -298,7 +307,25 @@ const AllOrders: React.FC = () => {
                 </Button>
               </div>
             )}
-            {["AWAITING_COLLECTION", "PAID", "COLLECTED"].includes(selectedOrder.status) && (
+            {["AWAITING_COLLECTION", "PAID"].includes(selectedOrder.status) && (
+              <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  className="bg-red-600 hover:bg-red-700 text-white flex-1 font-medium"
+                  onClick={handleCancelRefund}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2 text-white inline" /> Cancel & Refund
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex-1 font-medium"
+                  onClick={() => handleTrackOrder(selectedOrder.trackingNumber)}
+                >
+                  <Truck className="h-4 w-4 mr-2 text-black inline" /> Track
+                </Button>
+              </div>
+            )}
+            {["COLLECTED"].includes(selectedOrder.status) && (
               <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
                 <Button
                   type="button"
@@ -309,6 +336,142 @@ const AllOrders: React.FC = () => {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Policy Modal */}
+      {showCancellationPolicy && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm"
+          onClick={handleCloseCancellationPolicy}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto relative border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">TMOF COURIERS – Cancellation Policy</h2>
+              <button 
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                onClick={handleCloseCancellationPolicy}
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800 mb-1">Important Notice</p>
+                    <p className="text-sm text-yellow-700">
+                      At TMOF COURIERS, we value our customers and strive to provide reliable and efficient delivery services. 
+                      We also understand that plans may change, which is why we have a clear and fair cancellation policy in place.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <section>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">1. General Policy</h3>
+                  <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
+                    <li>All cancellations must be communicated to TMOF COURIERS via our official booking channels (Website, WhatsApp line, or direct call).</li>
+                    <li>Cancellations are only confirmed once you receive an acknowledgment from us.</li>
+                    <li>A <strong>30% cancellation fee</strong> applies to all services if a booking is canceled after confirmation but before dispatch of a driver.</li>
+                    <li>If a driver has already been dispatched, the <strong>full base fee</strong> will apply, plus any distance already traveled.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">2. Service-Specific Conditions</h3>
+                  
+                  <div className="grid gap-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Same Day Delivery</h4>
+                      <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                        <li>Cancellation before dispatch: 30% of base fee (R24)</li>
+                        <li>After dispatch: Full base fee (R80) + R4.00/km for distance already traveled</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Instant Delivery</h4>
+                      <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                        <li>Cancellation before dispatch: 30% of base fee (R30)</li>
+                        <li>After dispatch: Full base fee (R100) + R7.00/km for distance already traveled</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Standard Delivery</h4>
+                      <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                        <li>Cancellation before dispatch: 30% of base fee (R33)</li>
+                        <li>After dispatch: Full base fee (R110)</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Movers Service</h4>
+                      <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                        <li>Cancellation before dispatch: 30% of base fee (R135)</li>
+                        <li>After dispatch: Full base fee (R450) + R25/km for distance already traveled</li>
+                        <li>If a trailer was requested, a <strong>non-refundable trailer booking fee of R450</strong> applies once confirmed</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-2">Swift Errand (Runner)</h4>
+                      <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                        <li>Cancellation before dispatch: 30% of service fee (minimum R45)</li>
+                        <li>After dispatch: Full service fee (R150 minimum, or 5% of purchase value if higher) + applicable Instant Delivery charges</li>
+                        <li>If purchases have already been made on behalf of the client, the full item cost will be charged in addition to courier fees</li>
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">3. Refunds</h3>
+                  <ul className="space-y-2 text-sm text-gray-700 list-disc list-inside">
+                    <li>Refunds (where applicable) will be processed within <strong>7 business days</strong>.</li>
+                    <li>Refunds will exclude the cancellation fee or any costs already incurred by TMOF COURIERS.</li>
+                  </ul>
+                </section>
+
+                <section>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">4. Force Majeure</h3>
+                  <p className="text-sm text-gray-700">
+                    In the event of delays or cancellations due to unforeseen circumstances beyond our control 
+                    (e.g., extreme weather, strikes, accidents), TMOF COURIERS reserves the right to reschedule 
+                    or cancel the booking without penalty to the client.
+                  </p>
+                </section>
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t border-gray-200">
+                <Button
+                  onClick={handleCloseCancellationPolicy}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Handle actual cancellation logic here
+                    alert('Cancellation request submitted. We will contact you shortly.');
+                    handleCloseCancellationPolicy();
+                    setSelectedOrder(null);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white flex-1"
+                >
+                  Proceed with Cancellation
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

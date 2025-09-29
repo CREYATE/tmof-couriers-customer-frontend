@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Clock, Truck } from "lucide-react";
+import { Package, Clock, Truck, Home } from "lucide-react";
 
 interface ServiceTypeSelectorProps {
 	value: string;
@@ -49,6 +49,15 @@ export const ServiceTypeSelector = ({ value, onChange }: ServiceTypeSelectorProp
 							<div>
 								<div className="font-medium">Instant Delivery</div>
 								<div className="text-xs text-gray-500">2-3 hours</div>
+							</div>
+						</div>
+					</SelectItem>
+					<SelectItem value="furniture-moving">
+						<div className="flex items-center gap-2">
+							<Home className="h-4 w-4" />
+							<div>
+								<div className="font-medium">Furniture Moving</div>
+								<div className="text-xs text-gray-500">Trailer +R450 optional</div>
 							</div>
 						</div>
 					</SelectItem>

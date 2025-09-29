@@ -1,23 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calculator, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { useDynamicPricing } from "@/hooks/useDynamicPricing";
-import { calculateDistanceSecure } from "@/utils/secureGoogleMaps";
-import { 
-  sanitizeInput, 
-  validateAddress, 
-  validateWeight, 
-  validateDistance, 
-  validateItemValue, 
-  validateDescription,
-  rateLimitCheck 
-} from "@/utils/secureInputValidation";
-import { AddressInput } from "./AddressInput";
+import axios from 'axios';
+import debounce from 'lodash/debounce';
 import { ServiceTypeSelector } from "./ServiceTypeSelector";
 
 interface QuotationFormProps {
@@ -27,90 +18,231 @@ interface QuotationFormProps {
 
 export const QuotationForm = ({ mapsLoaded, onQuotationCalculated }: QuotationFormProps) => {
   const [formData, setFormData] = useState({
-    serviceType: "",
+    serviceType: "T",
     pickupAddress: "",
     deliveryAddress: "",
     weight: "",
     distance: "",
     itemValue: "",
-    description: ""
+    description: "",
+    price: 0,
+    includeTrailer: false,
   });
   
   const [isCalculating, setIsCalculating] = useState(false);
-  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
-  const [allowManualDistance, setAllowManualDistance] = useState(false);
-  
-  const { calculatePricing } = useDynamicPricing();
+  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
+  const [error, setError] = useState('');
+  const [localMapsLoaded, setLocalMapsLoaded] = useState(false);
+  const [isPickupValid, setIsPickupValid] = useState(false);
+  const [isDeliveryValid, setIsDeliveryValid] = useState(false);
+  const pickupInputRef = useRef<HTMLInputElement>(null);
+  const deliveryInputRef = useRef<HTMLInputElement>(null);
 
-  const calculateDistanceSecurely = async () => {
-    if (!formData.pickupAddress || !formData.deliveryAddress) {
+  const calculateEstimation = debounce(async () => {
+    if (!isPickupValid || !isDeliveryValid || !formData.serviceType) {
+      console.log('Skipping estimate due to invalid data:', { isPickupValid, isDeliveryValid, formData });
+      setError('Please select valid pickup and delivery addresses');
       return;
     }
-
-    // Rate limiting check
-    if (!rateLimitCheck('distance-calc', 5, 60000)) {
-      toast.error('Too many distance calculations. Please wait a moment.');
-      return;
-    }
-
-    // Validate addresses
-    if (!validateAddress(formData.pickupAddress) || !validateAddress(formData.deliveryAddress)) {
-      toast.error('Please enter valid addresses');
-      return;
-    }
-
-    setIsCalculatingDistance(true);
-    console.log('Calculating distance between:', formData.pickupAddress, 'and', formData.deliveryAddress);
-    
+    console.log('Sending estimate request:', formData);
+    setIsCalculating(true);
+    setError('');
     try {
-      const result = await calculateDistanceSecure(
-        sanitizeInput(formData.pickupAddress),
-        sanitizeInput(formData.deliveryAddress)
-      );
+      // Convert frontend service type to backend format
+      const convertServiceType = (frontendType: string): string => {
+        switch (frontendType) {
+          case 'furniture-moving': return 'FURNITURE_MOVING';
+          case 'same-day': return 'SAME_DAY';
+          case 'swift-errand': return 'SWIFT_ERRAND';
+          case 'instant': return 'INSTANT_DELIVERY';
+          case 'standard': return 'STANDARD_DELIVERY';
+          default: return frontendType.toUpperCase().replace('-', '_');
+        }
+      };
+      
+      const backendServiceType = convertServiceType(formData.serviceType);
+      
+      // For quotation form, we use the public endpoint (no authentication required)
+      const response = await axios.post('/api/orders/public/estimate', {
+        pickupAddress: formData.pickupAddress,
+        deliveryAddress: formData.deliveryAddress,
+        weight: formData.weight ? parseFloat(formData.weight) : 1.0,
+        serviceType: backendServiceType,
+        includeTrailer: formData.serviceType === 'furniture-moving' ? formData.includeTrailer : false,
+      });
 
-      if (result) {
-        console.log('Distance calculation successful:', result);
-        setFormData(prev => ({ ...prev, distance: result.distance.toString() }));
-        toast.success(`Distance calculated: ${result.distance}km`);
-        setAllowManualDistance(false);
-      } else {
-        console.warn('Distance calculation failed, enabling manual input');
-        toast.error('Could not calculate distance automatically. Please enter distance manually.');
-        setAllowManualDistance(true);
+      console.log('Making public estimate request to backend:', {
+        pickupAddress: formData.pickupAddress,
+        deliveryAddress: formData.deliveryAddress,
+        weight: formData.weight ? parseFloat(formData.weight) : 1.0,
+        serviceType: backendServiceType,
+        includeTrailer: formData.serviceType === 'furniture-moving' ? formData.includeTrailer : false,
+      });
+
+      if (response.data.error) {
+        throw new Error(response.data.error);
       }
-    } catch (error) {
-      console.error('Error calculating distance:', error);
-      toast.error('Failed to calculate distance. Please enter distance manually.');
-      setAllowManualDistance(true);
-    } finally {
-      setIsCalculatingDistance(false);
-    }
-  };
 
-  // Auto-calculate distance when both addresses are set
+      if (response.data.distanceKm == null || response.data.price == null) {
+        throw new Error('Invalid estimate response: distance or price is missing');
+      }
+
+      const distanceKm = Number(response.data.distanceKm).toFixed(2);
+      const price = Number(response.data.price);
+      
+      // Fallback base fee calculation for older backend versions
+      const getBaseFee = (serviceType: string): number => {
+        switch (serviceType) {
+          case "SAME_DAY":
+            return 80.0;
+          case "INSTANT_DELIVERY":
+            return 100.0;
+          case "STANDARD_DELIVERY":
+            return 110.0;
+          case "FURNITURE_MOVING":
+          case "furniture-moving":
+            return 450.0;
+          case "SWIFT_ERRAND":
+            return 150.0;
+          default:
+            return 50.0;
+        }
+      };
+      
+      const baseFee = response.data.baseFee ? Number(response.data.baseFee) : getBaseFee(formData.serviceType);
+      const trailerFee = response.data.trailerFee ? Number(response.data.trailerFee) : 0;
+      const distanceFee = price - baseFee - trailerFee;
+
+      setEstimatedPrice(price);
+      setFormData(prev => ({
+        ...prev,
+        distance: distanceKm,
+        price: price,
+      }));
+      
+      // Create quotation object for display
+      const quotation = {
+        serviceType: formData.serviceType,
+        pickupAddress: formData.pickupAddress,
+        deliveryAddress: formData.deliveryAddress,
+        weight: formData.weight || '1',
+        distance: distanceKm,
+        itemValue: formData.itemValue || '0',
+        description: formData.description,
+        price: distanceFee, // Distance/weight fee component
+        baseFee: baseFee,   // Base fee component from backend
+        trailerFee: trailerFee, // Trailer fee from backend
+        includeTrailer: formData.serviceType === 'furniture-moving' ? formData.includeTrailer : false,
+        totalCost: price    // Total cost
+      };
+      
+      console.log('Estimate received:', { price, distance: distanceKm });
+      onQuotationCalculated(quotation);
+      toast.success(`Quote calculated: R${price} for ${distanceKm}km`);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to calculate estimate';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Estimate error:', error);
+    }
+    setIsCalculating(false);
+  }, 500);
+
+  // Initialize Google Maps autocomplete
   useEffect(() => {
-    if (formData.pickupAddress && formData.deliveryAddress && !allowManualDistance) {
-      const timeoutId = setTimeout(() => {
-        calculateDistanceSecurely();
-      }, 1000); // Debounce for 1 second
+    const loadGoogleMaps = () => {
+      if (typeof window === 'undefined' || window.google?.maps?.places) {
+        setLocalMapsLoaded(true);
+        return;
+      }
 
-      return () => clearTimeout(timeoutId);
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        setError('Google Maps API key is missing');
+        console.error('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set in .env.local');
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.async = true;
+      script.onerror = () => {
+        setError('Failed to load Google Maps API');
+        console.error('Failed to load Google Maps script');
+      };
+      document.head.appendChild(script);
+
+      script.onload = () => {
+        if (pickupInputRef.current && deliveryInputRef.current && window.google?.maps?.places) {
+          const pickupAutocomplete = new window.google.maps.places.Autocomplete(pickupInputRef.current, {
+            types: ['address'],
+            componentRestrictions: { country: 'ZA' },
+          });
+          const deliveryAutocomplete = new window.google.maps.places.Autocomplete(deliveryInputRef.current, {
+            types: ['address'],
+            componentRestrictions: { country: 'ZA' },
+          });
+
+          pickupAutocomplete.addListener("place_changed", () => {
+            const place = pickupAutocomplete.getPlace();
+            if (place.formatted_address) {
+              console.log('Pickup selected:', place.formatted_address);
+              setFormData(prev => ({ ...prev, pickupAddress: place.formatted_address }));
+              setIsPickupValid(true);
+            } else {
+              setIsPickupValid(false);
+            }
+          });
+
+          deliveryAutocomplete.addListener("place_changed", () => {
+            const place = deliveryAutocomplete.getPlace();
+            if (place.formatted_address) {
+              console.log('Delivery selected:', place.formatted_address);
+              setFormData(prev => ({ ...prev, deliveryAddress: place.formatted_address }));
+              setIsDeliveryValid(true);
+            } else {
+              setIsDeliveryValid(false);
+            }
+          });
+          setLocalMapsLoaded(true);
+        } else {
+          setError('Google Maps Places API not available');
+          console.error('Google Maps Places API not initialized');
+        }
+      };
+    };
+
+    loadGoogleMaps();
+  }, []);
+
+  // Auto-calculate when addresses are selected
+  useEffect(() => {
+    console.log('QuotationForm useEffect triggered:', {
+      localMapsLoaded, 
+      isPickupValid, 
+      isDeliveryValid, 
+      serviceType: formData.serviceType,
+      includeTrailer: formData.includeTrailer,
+      weight: formData.weight
+    });
+    if (localMapsLoaded && isPickupValid && isDeliveryValid && formData.serviceType) {
+      console.log('Conditions met, calling calculateEstimation');
+      calculateEstimation();
+    } else {
+      console.log('Conditions not met for calculation');
     }
-  }, [formData.pickupAddress, formData.deliveryAddress, allowManualDistance]);
+  }, [localMapsLoaded, isPickupValid, isDeliveryValid, formData.weight, formData.serviceType, formData.includeTrailer]);
 
-  const handleInputChange = (field: string, value: string) => {
-    // Sanitize input before setting
-    const sanitizedValue = sanitizeInput(value);
-    setFormData(prev => ({ ...prev, [field]: sanitizedValue }));
+  const handleInputChange = (field: string, value: string | boolean) => {
+    console.log('handleInputChange called:', { field, value, currentFormData: formData });
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'pickupAddress') setIsPickupValid(false);
+    if (field === 'deliveryAddress') setIsDeliveryValid(false);
     
     // Reset quotation when key fields change
-    if (['pickupAddress', 'deliveryAddress', 'weight', 'serviceType', 'distance'].includes(field)) {
+    if (['pickupAddress', 'deliveryAddress', 'weight', 'serviceType', 'includeTrailer'].includes(field)) {
       onQuotationCalculated(null);
-    }
-
-    // Reset manual distance flag when addresses change
-    if (['pickupAddress', 'deliveryAddress'].includes(field)) {
-      setAllowManualDistance(false);
+      setEstimatedPrice(null);
     }
   };
 
@@ -119,101 +251,14 @@ export const QuotationForm = ({ mapsLoaded, onQuotationCalculated }: QuotationFo
       toast.error("Please fill in all required fields (Service Type, Pickup Address, and Delivery Address)");
       return false;
     }
-
-    if (!validateAddress(formData.pickupAddress)) {
-      toast.error("Please enter a valid pickup address");
-      return false;
-    }
-
-    if (!validateAddress(formData.deliveryAddress)) {
-      toast.error("Please enter a valid delivery address");
-      return false;
-    }
-
-    if (!formData.distance || !validateDistance(formData.distance)) {
-      toast.error("Distance is required and must be a valid number between 0.1 and 1000 km");
-      return false;
-    }
-
-    if (formData.weight && !validateWeight(formData.weight)) {
-      toast.error("Please enter a valid weight (0.1 - 1000 kg)");
-      return false;
-    }
-
-    if (formData.itemValue && !validateItemValue(formData.itemValue)) {
-      toast.error("Please enter a valid item value");
-      return false;
-    }
-
-    if (formData.description && !validateDescription(formData.description)) {
-      toast.error("Description must be less than 1000 characters");
-      return false;
-    }
-
     return true;
   };
 
-  const calculateQuotation = async () => {
-    console.log('Starting quotation calculation with data:', formData);
-
-    // Rate limiting check
-    if (!rateLimitCheck('quotation-calc', 10, 60000)) {
-      toast.error('Too many quotation requests. Please wait a moment.');
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsCalculating(true);
-    
-    try {
-      const distance = parseFloat(formData.distance);
-      const weight = parseFloat(formData.weight) || 1; // Default to 1kg if not specified
-      const itemValue = parseFloat(formData.itemValue) || 0;
-
-      console.log('Calculating pricing with:', {
-        distance,
-        weight,
-        itemValue,
-        serviceType: formData.serviceType
-      });
-
-      const pricing = await calculatePricing(
-        distance,
-        undefined,
-        formData.serviceType as 'standard' | 'same-day' | 'swift-errand' | 'instant',
-        weight,
-        itemValue
-      );
-
-      console.log('Pricing calculation result:', pricing);
-
-      if (pricing) {
-        const quotation = {
-          ...pricing,
-          distance,
-          weight,
-          itemValue,
-          serviceType: formData.serviceType,
-          pickupAddress: formData.pickupAddress,
-          deliveryAddress: formData.deliveryAddress,
-          description: formData.description
-        };
-        
-        console.log('Final quotation:', quotation);
-        onQuotationCalculated(quotation);
-        toast.success("Quotation calculated successfully!");
-      } else {
-        console.error('Pricing calculation returned null');
-        toast.error("Failed to calculate pricing. Please try again.");
-      }
-    } catch (error) {
-      console.error('Error calculating quotation:', error);
-      toast.error("Failed to calculate quotation. Please check your inputs and try again.");
-    } finally {
-      setIsCalculating(false);
+  const handleCalculateQuotation = () => {
+    if (validateForm() && isPickupValid && isDeliveryValid) {
+      calculateEstimation();
+    } else {
+      toast.error("Please select valid addresses from the dropdown suggestions");
     }
   };
 
@@ -229,31 +274,72 @@ export const QuotationForm = ({ mapsLoaded, onQuotationCalculated }: QuotationFo
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-200">{error}</p>}
+        {!localMapsLoaded && <p className="text-gray-500">Loading Google Maps...</p>}
+        
         <ServiceTypeSelector 
           value={formData.serviceType}
           onChange={(value) => handleInputChange('serviceType', value)}
         />
 
-        <AddressInput
-          id="pickup-address"
-          label="Pickup Address"
-          placeholder="Start typing pickup address..."
-          value={formData.pickupAddress}
-          onChange={(value) => handleInputChange('pickupAddress', value)}
-          mapsLoaded={mapsLoaded}
-          required
-        />
+        {/* Debug info */}
+        <div className="bg-gray-100 p-2 rounded text-xs">
+          <strong>Debug:</strong> serviceType: {formData.serviceType}, includeTrailer: {String(formData.includeTrailer)}
+        </div>
 
-        <AddressInput
-          id="delivery-address"
-          label="Delivery Address"
-          placeholder="Start typing delivery address..."
-          value={formData.deliveryAddress}
-          onChange={(value) => handleInputChange('deliveryAddress', value)}
-          mapsLoaded={mapsLoaded}
-          isCalculatingDistance={isCalculatingDistance}
-          required
-        />
+        {formData.serviceType === 'furniture-moving' && (
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <Label className="text-sm font-medium mb-3 block">Trailer Options</Label>
+            <RadioGroup 
+              value={formData.includeTrailer ? 'yes' : 'no'} 
+              onValueChange={(value) => {
+                console.log('RadioGroup onValueChange called:', value);
+                handleInputChange('includeTrailer', value === 'yes');
+              }}
+              className="flex gap-6"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no" id="no-trailer" />
+                <Label htmlFor="no-trailer" className="text-sm">No trailer needed</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="yes" id="yes-trailer" />
+                <Label htmlFor="yes-trailer" className="text-sm">Include trailer (+R450)</Label>
+              </div>
+            </RadioGroup>
+            {formData.includeTrailer && (
+              <p className="text-xs text-blue-600 mt-2">✓ Trailer included - Additional R450 will be added to your quote</p>
+            )}
+          </div>
+        )}
+
+        <div>
+          <Label htmlFor="pickup-address">Pickup Address *</Label>
+          <Input
+            id="pickup-address"
+            ref={pickupInputRef}
+            placeholder="Start typing pickup address..."
+            value={formData.pickupAddress}
+            onChange={(e) => handleInputChange('pickupAddress', e.target.value)}
+            className={isPickupValid ? "border-green-500" : ""}
+            required
+          />
+          {isPickupValid && <p className="text-xs text-green-600 mt-1">✓ Valid address selected</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="delivery-address">Delivery Address *</Label>
+          <Input
+            id="delivery-address"
+            ref={deliveryInputRef}
+            placeholder="Start typing delivery address..."
+            value={formData.deliveryAddress}
+            onChange={(e) => handleInputChange('deliveryAddress', e.target.value)}
+            className={isDeliveryValid ? "border-green-500" : ""}
+            required
+          />
+          {isDeliveryValid && <p className="text-xs text-green-600 mt-1">✓ Valid address selected</p>}
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -273,109 +359,87 @@ export const QuotationForm = ({ mapsLoaded, onQuotationCalculated }: QuotationFo
             </p>
           </div>
           <div>
-            <Label htmlFor="distance">Distance (km) *</Label>
-            <div className="relative">
-              <Input
-                id="distance"
-                type="number"
-                placeholder={allowManualDistance ? "Enter distance manually" : "Auto-calculated"}
-                value={formData.distance}
-                onChange={(e) => allowManualDistance ? handleInputChange('distance', e.target.value) : undefined}
-                readOnly={!allowManualDistance}
-                className={allowManualDistance ? "" : "bg-gray-50"}
-                min="0.1"
-                max="1000"
-                step="0.1"
-              />
-              {!allowManualDistance && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1 h-8 px-2"
-                  onClick={() => setAllowManualDistance(true)}
-                  title="Enter distance manually"
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {allowManualDistance 
-                ? "Enter the distance manually if auto-calculation failed"
-                : "Distance is automatically calculated from your addresses"
-              }
-            </p>
-            {allowManualDistance && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2 text-xs"
-                onClick={() => {
-                  setAllowManualDistance(false);
-                  setFormData(prev => ({ ...prev, distance: "" }));
-                  if (formData.pickupAddress && formData.deliveryAddress) {
-                    calculateDistanceSecurely();
-                  }
-                }}
-              >
-                Try Auto-Calculate Again
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {formData.serviceType === 'swift-errand' && (
-          <div>
-            <Label htmlFor="item-value">Item Value (ZAR)</Label>
+            <Label htmlFor="distance">Distance (km)</Label>
             <Input
-              id="item-value"
+              id="distance"
               type="number"
-              placeholder="e.g., 500"
-              value={formData.itemValue}
-              onChange={(e) => handleInputChange('itemValue', e.target.value)}
-              min="0"
-              max="1000000"
+              placeholder="Auto-calculated"
+              value={formData.distance}
+              readOnly
+              className="bg-gray-50"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Required for Swift Errand service fee calculation
+              Distance calculated automatically
             </p>
           </div>
-        )}
+        </div>
 
         <div>
-          <Label htmlFor="description">Item Description (Optional)</Label>
-          <Textarea
-            id="description"
-            placeholder="Describe your package..."
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            maxLength={1000}
+          <Label htmlFor="item-value">Item Value (R)</Label>
+          <Input
+            id="item-value"
+            type="number"
+            placeholder="e.g., 500 (optional)"
+            value={formData.itemValue}
+            onChange={(e) => handleInputChange('itemValue', e.target.value)}
+            min="0"
+            step="0.01"
           />
           <p className="text-xs text-gray-500 mt-1">
-            {formData.description.length}/1000 characters
+            For insurance purposes (optional)
           </p>
         </div>
 
-        <Button 
-          onClick={calculateQuotation} 
-          disabled={isCalculating || isCalculatingDistance || !formData.serviceType || !formData.pickupAddress || !formData.deliveryAddress || !formData.distance}
-          className="w-full bg-[#ffd215] hover:bg-[#e6bd13] text-black"
-        >
-          {isCalculating ? 'Calculating...' : 
-           isCalculatingDistance ? 'Calculating Distance...' : 
-           'Calculate Quote'}
-        </Button>
-
-        {(!formData.serviceType || !formData.pickupAddress || !formData.deliveryAddress || !formData.distance) && (
-          <p className="text-xs text-gray-500 text-center">
-            Please fill in all required fields to enable quote calculation
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            placeholder="Brief description of items being shipped (optional)"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            rows={3}
+            maxLength={500}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Optional: {500 - formData.description.length} characters remaining
           </p>
+        </div>
+
+        {estimatedPrice !== null && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-green-800">Estimated Price:</span>
+              <span className="text-lg font-bold text-green-900">R{estimatedPrice}</span>
+            </div>
+            <div className="text-xs text-green-600 mt-1">
+              Distance: {formData.distance}km • Service: {formData.serviceType}
+            </div>
+          </div>
         )}
+
+        <Button
+          onClick={handleCalculateQuotation}
+          disabled={isCalculating || !localMapsLoaded}
+          className="w-full bg-[#ffd215] hover:bg-[#e5bd13] text-black font-semibold"
+        >
+          {isCalculating ? (
+            <>
+              <Calculator className="mr-2 h-4 w-4 animate-spin" />
+              Calculating Quote...
+            </>
+          ) : (
+            <>
+              <Calculator className="mr-2 h-4 w-4" />
+              Get Instant Quote
+            </>
+          )}
+        </Button>
+        
+        <p className="text-xs text-gray-500 text-center mt-2">
+          Prices are estimates and may vary based on actual conditions
+        </p>
       </CardContent>
     </Card>
   );
 };
-import React from "react";
 
