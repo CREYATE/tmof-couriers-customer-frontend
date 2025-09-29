@@ -1,25 +1,27 @@
-"use client";
-
 import '../app/globals.css';
-import Navbar from '@/components/Navbar';
-import { usePathname } from 'next/navigation';
-import Footer from '@/components/Footer';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ClientLayout from './ClientLayout';
+import { Analytics } from "@vercel/analytics/react";
 
-const queryClient = new QueryClient();
+export const metadata = {
+  title: "TMOF Couriers - Same-Day & Express Delivery in Gauteng.",
+  description:
+    "TMOF Couriers offers reliable same-day and express delivery services across Gauteng. Book now for fast, secure, and professional courier solutions.",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '16x16 32x32' },
+      { url: '/tmof%20logo.png', sizes: '32x32', type: 'image/png' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: { url: '/tmof%20logo.png', sizes: '180x180', type: 'image/png' },
+  },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const hideLayout = pathname.startsWith('/login') || pathname.startsWith('/signup') || pathname.startsWith('/dashboard') || pathname.startsWith('/orders') || pathname.startsWith('/wallet') || pathname.startsWith('/maps');
-  const showNavbar = !pathname.startsWith('/dashboard') && !pathname.startsWith('/orders') && !pathname.startsWith('/wallet') && !pathname.startsWith('/maps') && !hideLayout;
   return (
     <html lang="en">
       <body className="font-sans bg-gray-100 text-gray-900">
-        <QueryClientProvider client={queryClient}>
-          {showNavbar && <Navbar />}
-          <main className="min-h-screen">{children}</main>
-          {!hideLayout && <Footer />}
-        </QueryClientProvider>
+        <ClientLayout>{children}</ClientLayout>
+        <Analytics />
       </body>
     </html>
   );
