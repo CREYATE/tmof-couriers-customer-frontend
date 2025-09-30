@@ -9,7 +9,6 @@ export interface PaystackOptions {
   onClose?: () => void;
 }
 
-// Proper global declaration for PaystackPop
 declare global {
   interface Window {
     PaystackPop?: {
@@ -28,6 +27,12 @@ export function payWithPaystack(options: PaystackOptions) {
     currency: options.currency,
     ref: options.ref,
   });
+
+  if (!options.key || options.key === 'pk_test_missing') {
+    console.error('Paystack public key is missing or invalid');
+    if (options.onClose) options.onClose();
+    throw new Error('Paystack public key is required');
+  }
 
   const launchPaystack = () => {
     if (!window.PaystackPop) {
@@ -59,13 +64,11 @@ export function payWithPaystack(options: PaystackOptions) {
   if (window.PaystackPop) {
     launchPaystack();
   } else {
-    // Load Paystack script
     const script = document.createElement('script');
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
     script.onload = () => {
       console.log('Paystack script loaded');
-      // Give it a moment to initialize
       setTimeout(launchPaystack, 100);
     };
     script.onerror = (error) => {
@@ -76,7 +79,6 @@ export function payWithPaystack(options: PaystackOptions) {
   }
 }
 
-// Alternative method for direct Paystack integration (if needed)
 export const initializePaystackPayment = async (options: PaystackOptions): Promise<void> => {
   return new Promise((resolve, reject) => {
     const paystackOptions = {
@@ -93,16 +95,19 @@ export const initializePaystackPayment = async (options: PaystackOptions): Promi
       },
     };
     
-    payWithPaystack(paystackOptions);
+    try {
+      payWithPaystack(paystackOptions);
+    } catch (error: any) {
+      console.error('Paystack initialization error:', error);
+      reject(error);
+    }
   });
 };
 
-// Utility function to check if Paystack is loaded
 export const isPaystackLoaded = (): boolean => {
   return typeof window !== 'undefined' && !!window.PaystackPop;
 };
 
-// Utility function to get Paystack transaction reference
 export const generatePaystackReference = (prefix: string = 'TMOF'): string => {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
