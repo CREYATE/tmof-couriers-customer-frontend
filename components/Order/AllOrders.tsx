@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package, MapPin, Clock, Truck, X, AlertTriangle } from "lucide-react";
 import axios from "axios";
+import TmofSpinner from "@/components/ui/TmofSpinner";
 
 interface Order {
   id: number;
@@ -31,7 +32,7 @@ const getStatusBadgeColor = (status: string) => {
     case "DELIVERED":
       return "bg-green-600 text-white";
     case "CANCELLED":
-      return "bg-red-600 text-white";
+      return "bg-red-600 text-white";  // Red for Cancelled
     case "IN_TRANSIT":
       return "bg-orange-500 text-white";
     case "AWAITING_COLLECTION":
@@ -68,6 +69,7 @@ const AllOrders: React.FC = () => {
   const [oldOrders, setOldOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,14 +86,25 @@ const AllOrders: React.FC = () => {
         });
         console.log("Order history response:", response.data);
         const orders: Order[] = response.data;
+        
+        // Sort all orders by creation date (newest first)
+        const sortedOrders = orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const recent = orders.filter(
-          (order) => new Date(order.createdAt) >= sevenDaysAgo
+        
+        // Recent orders: within 7 days AND not delivered/cancelled
+        const recent = sortedOrders.filter(
+          (order) => new Date(order.createdAt) >= sevenDaysAgo && 
+          !['DELIVERED', 'CANCELLED'].includes(order.status)
         );
-        const old = orders.filter(
-          (order) => new Date(order.createdAt) < sevenDaysAgo
+        
+        // Older orders: older than 7 days OR delivered/cancelled (all sorted newest to oldest)
+        const old = sortedOrders.filter(
+          (order) => new Date(order.createdAt) < sevenDaysAgo || 
+          ['DELIVERED', 'CANCELLED'].includes(order.status)
         );
+        
         console.log("Recent orders:", recent);
         console.log("Old orders:", old);
         setRecentOrders(recent);
@@ -107,6 +120,7 @@ const AllOrders: React.FC = () => {
   }, []);
 
   const handleOrderClick = (order: Order) => {
+    if (order.status === 'CANCELLED') return;  // Unclickable if cancelled
     setSelectedOrder(order);
   };
 
@@ -122,6 +136,34 @@ const AllOrders: React.FC = () => {
     setShowCancellationPolicy(false);
   };
 
+  const handleProceedCancellation = async () => {
+    if (!selectedOrder) return;
+
+    setCancelling(true);
+    try {
+      await axios.post(`/api/orders/cancel/${selectedOrder.trackingNumber}`, {}, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+      });
+
+      // Update local state
+      const updateOrders = (orders: Order[]) => orders.map(o => 
+        o.trackingNumber === selectedOrder.trackingNumber ? { ...o, status: 'CANCELLED' } : o
+      );
+
+      setRecentOrders(updateOrders(recentOrders));
+      setOldOrders(updateOrders(oldOrders));
+
+      // Removed the email alert as requested
+    } catch (err: any) {
+      console.error('Cancellation error:', err);
+      alert(err.response?.data?.error || 'Failed to cancel order');
+    } finally {
+      setCancelling(false);
+      handleCloseCancellationPolicy();
+      handleCloseModal();
+    }
+  };
+
   const handleTrackOrder = (trackingNumber: string) => {
     router.push(`/orders/track-parcel?trackingNumber=${trackingNumber}`);
   };
@@ -132,17 +174,18 @@ const AllOrders: React.FC = () => {
       {orders.length === 0 ? (
         <Card className="mx-0">
           <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
-            <Package className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-4" />
-            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2 text-center">No {title.toLowerCase()}</h3>
-            <p className="text-sm sm:text-base text-gray-500 text-center mb-6">
-              No {title.toLowerCase()} found. Create a new order to get started.
-            </p>
+            <p className="text-gray-500">No orders found.</p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3 sm:space-y-4">
           {orders.map((order) => (
-            <Card key={order.id} className="hover:shadow-lg cursor-pointer transition-all duration-200 border border-gray-200 bg-white touch-manipulation" onClick={() => handleOrderClick(order)}>
+            <Card 
+              key={order.id} 
+              className={`hover:shadow-lg transition-all duration-200 border border-gray-200 bg-white touch-manipulation 
+                ${order.status === 'CANCELLED' ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`} 
+              onClick={() => handleOrderClick(order)}
+            >
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate mr-2">{order.customerName || "Customer"}</h3>
@@ -195,17 +238,7 @@ const AllOrders: React.FC = () => {
   return (
     <div className="min-h-screen">
       <div className="max-w-6xl mx-auto space-y-6 pt-0 sm:pt-20">
-        {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-4 sm:space-y-0">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Order History</h1>
-          <Button
-            type="button"
-            onClick={() => router.push("/orders/create/order-type")}
-            className="bg-[#ffd215] hover:bg-[#e5bd13] text-black flex items-center gap-2 font-semibold px-4 py-3 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base touch-manipulation shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Package className="h-5 w-5 text-black" />
-            Create New Order
-          </Button>
-        </div> */}
+        {/* Unchanged header comment */}
       {loading ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -459,21 +492,28 @@ const AllOrders: React.FC = () => {
                   onClick={handleCloseCancellationPolicy}
                   variant="outline"
                   className="flex-1"
+                  disabled={cancelling}
                 >
                   Close
                 </Button>
                 <Button
-                  onClick={() => {
-                    // Handle actual cancellation logic here
-                    alert('Cancellation request submitted. We will contact you shortly.');
-                    handleCloseCancellationPolicy();
-                    setSelectedOrder(null);
-                  }}
+                  onClick={handleProceedCancellation}
                   className="bg-red-600 hover:bg-red-700 text-white flex-1"
+                  disabled={cancelling}
                 >
-                  Proceed with Cancellation
+                  {cancelling ? "Processing..." : "Proceed with Cancellation"}
                 </Button>
               </div>
+              
+              {/* Cancellation Loading Overlay */}
+              {cancelling && (
+                <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-lg">
+                  <div className="flex flex-col items-center space-y-4">
+                    <TmofSpinner />
+                    <p className="text-gray-600 font-medium">Processing cancellation...</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
