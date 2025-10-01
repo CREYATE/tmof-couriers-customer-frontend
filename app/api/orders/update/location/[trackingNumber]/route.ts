@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-const BACKEND_URL = 'http://localhost:8080';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ trackingNumber: string }> }) {
   try {
     const body = await request.json();
     const { trackingNumber } = await params;
-    const response = await axios.put(`${BACKEND_URL}/api/orders/update/location/${trackingNumber}`, body, {
-      headers: {
+  const response = await axios.put(`${BACKEND_URL}/api/orders/update/location/${trackingNumber}`, body, {      headers: {
         Authorization: request.headers.get('Authorization') || '',
         'Content-Type': 'application/json',
       },

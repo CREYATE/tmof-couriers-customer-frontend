@@ -5,8 +5,7 @@ export async function POST(request: NextRequest, { params }: { params: { trackin
   try {
     const { trackingNumber } = params;
 
-    const response = await axios.post(`http://localhost:8080/api/orders/cancel/${trackingNumber}`, {}, {
-      headers: {
+const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/cancel/${trackingNumber}`, {}, {      headers: {
         Authorization: request.headers.get('Authorization') || '',
       },
     });

@@ -4,7 +4,7 @@ import axios from 'axios';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('Estimate request body:', body);
+    // console.log('Estimate request body:', body);
 
     // Ensure includeTrailer is included, default to false if not provided
     const requestBody = {
@@ -22,8 +22,7 @@ export async function POST(request: NextRequest) {
       useWallet: body.useWallet,
     };
 
-    const response = await axios.post('http://localhost:8080/api/orders/estimate', requestBody, {
-      headers: {
+  const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/estimate`, requestBody, {      headers: {
         Authorization: request.headers.get('Authorization') || '',
         'Content-Type': 'application/json',
       },

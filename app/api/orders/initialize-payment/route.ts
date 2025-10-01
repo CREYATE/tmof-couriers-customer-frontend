@@ -5,8 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('Initialize-payment route - Received request:', body);
-    const response = await axios.post('http://localhost:8080/api/orders/initialize-payment', body, {
-      headers: {
+    const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/initialize-payment`, body, {      headers: {
         Authorization: request.headers.get('Authorization') || '',
         'Content-Type': 'application/json',
       },

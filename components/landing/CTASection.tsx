@@ -14,7 +14,7 @@ const CTASection = () => {
           <p className="text-sm mb-4 text-white/90">
             Join TMOF Couriers today and experience professional delivery services
           </p>
-          <Link href="/create-order">
+          <Link href="/login">
             <Button 
               size="default" 
               className="bg-white hover:bg-gray-100 text-tmof-red text-sm px-4 py-2 rounded-md font-semibold"

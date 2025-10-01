@@ -8,9 +8,10 @@ export const initializeWebSocket = (): Client => {
     return client;
   }
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+  // Use dedicated WS env var for protocol switching (ws:// local, wss:// prod)
+  const wsUrl = process.env.NEXT_PUBLIC_BACKEND_WS_URL || "http://localhost:8080/ws";
   client = new Client({
-    webSocketFactory: () => new SockJS(`${backendUrl}/ws`),
+    webSocketFactory: () => new SockJS(wsUrl),
     connectHeaders: {
       Authorization: `Bearer ${localStorage.getItem("jwt") || ""}`,
     },
@@ -38,6 +39,7 @@ export const initializeWebSocket = (): Client => {
   return client;
 };
 
+// Rest unchanged (subscribeToTopic and disconnectWebSocket)
 export const subscribeToTopic = (
   client: Client,
   topic: string,

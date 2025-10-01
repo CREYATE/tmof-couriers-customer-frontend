@@ -4,8 +4,7 @@ import axios from 'axios';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const response = await axios.post('http://localhost:8080/api/orders/verify-payment', body, {
-      headers: {
+const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/verify-payment`, body, {      headers: {
         Authorization: request.headers.get('Authorization') || '',
         'Content-Type': 'application/json',
       },
