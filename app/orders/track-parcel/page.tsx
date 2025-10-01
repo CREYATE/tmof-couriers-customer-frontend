@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ interface OrderUpdateResponse {
   currentLocation?: string;
 }
 
-export default function TrackParcelPage() {
+function TrackParcelContent() {
   const searchParams = useSearchParams();
   const initialTracking = searchParams.get("trackingNumber") || "";
   const [trackingNumber, setTrackingNumber] = useState(initialTracking);
@@ -396,5 +396,13 @@ export default function TrackParcelPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function TrackParcelPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><TmofSpinner /></div>}>
+      <TrackParcelContent />
+    </Suspense>
   );
 }

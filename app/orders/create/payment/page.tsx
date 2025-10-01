@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PaymentStep from "@/components/Order/PaymentStep";
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderData, setOrderData] = useState<any>({});
@@ -25,14 +25,14 @@ export default function PaymentPage() {
       preferredTime: searchParams.get('preferredTime') || '',
       deliveryInstructions: searchParams.get('deliveryInstructions') || '',
     };
-    console.log('PaymentPage - Parsed orderData:', orderDataFromParams);
+    // console.log('PaymentPage - Parsed orderData:', orderDataFromParams);
     setOrderData(orderDataFromParams);
   }, [searchParams]);
 
   const handleNext = (data: any) => {
     const updatedOrderData = { ...orderData, ...data };
     setOrderData(updatedOrderData);
-    console.log('PaymentPage - Proceeding with orderData:', updatedOrderData);
+    // console.log('PaymentPage - Proceeding with orderData:', updatedOrderData);
     router.push(
       `/orders/create/confirmation?trackingNumber=${encodeURIComponent(data.trackingNumber || '')}` +
       `&pickupAddress=${encodeURIComponent(orderData.pickupAddress)}` +
@@ -53,4 +53,12 @@ export default function PaymentPage() {
   };
 
   return <PaymentStep orderData={orderData} onNext={handleNext} />;
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <PaymentContent />
+    </Suspense>
+  );
 }

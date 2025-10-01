@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DeliveryInstructionsStep from "@/components/Order/DeliveryInstructionsStep";
 
-export default function DeliveryInstructionsPage() {
+function DeliveryInstructionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderData, setOrderData] = useState<any>({});
@@ -18,14 +18,14 @@ export default function DeliveryInstructionsPage() {
       serviceType: searchParams.get('serviceType') || 'STANDARD',
       price: parseFloat(searchParams.get('price') || '0'),
     };
-    console.log('DeliveryInstructionsPage - Parsed orderData:', orderDataFromParams);
+    // console.log('DeliveryInstructionsPage - Parsed orderData:', orderDataFromParams);
     setOrderData(orderDataFromParams);
   }, [searchParams]);
 
   const handleNext = (data: any) => {
     const updatedOrderData = { ...orderData, ...data };
     setOrderData(updatedOrderData);
-    console.log('DeliveryInstructionsPage - Proceeding with orderData:', updatedOrderData);
+    // console.log('DeliveryInstructionsPage - Proceeding with orderData:', updatedOrderData);
     router.push(
       `/orders/create/payment?pickupAddress=${encodeURIComponent(updatedOrderData.pickupAddress)}` +
       `&deliveryAddress=${encodeURIComponent(updatedOrderData.deliveryAddress)}` +
@@ -48,5 +48,13 @@ export default function DeliveryInstructionsPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <DeliveryInstructionsStep orderData={orderData} onNext={handleNext} />
     </div>
+  );
+}
+
+export default function DeliveryInstructionsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <DeliveryInstructionsContent />
+    </Suspense>
   );
 }

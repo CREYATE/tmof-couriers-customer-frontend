@@ -16,7 +16,7 @@ function FurnitureOrderContent() {
   });
 
   const handleFurnitureFormComplete = (data: any) => {
-    console.log('Furniture form completed:', data);
+    // console.log('Furniture form completed:', data);
     
     // Transform furniture data to match PaymentStep expectations
     const transformedData = {
@@ -68,7 +68,7 @@ function FurnitureOrderContent() {
   };
 
   const handlePaymentComplete = (paymentData: any) => {
-    console.log('Payment completed:', paymentData);
+    // console.log('Payment completed:', paymentData);
     // Handle successful payment
     router.push('/orders/success');
   };
