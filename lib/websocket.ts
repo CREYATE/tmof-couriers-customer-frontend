@@ -1,5 +1,4 @@
 import { Client, IMessage } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 
 let client: Client | null = null;
 
@@ -8,30 +7,44 @@ export const initializeWebSocket = (): Client => {
     return client;
   }
 
-  // Use dedicated WS env var for protocol switching (ws:// local, wss:// prod)
-  const wsUrl = process.env.NEXT_PUBLIC_BACKEND_WS_URL || "http://localhost:8080/ws";
+  // Dynamic secure native WS URL
+  let wsUrl;
+  if (typeof window !== 'undefined') {
+    const isSecure = window.location.protocol === 'https:';
+    const protocol = isSecure ? 'wss' : 'ws';
+    const backendHost = isSecure ? 'tmof-couriers.onrender.com' : 'localhost:8080';
+    wsUrl = `${protocol}://${backendHost}/ws`;
+  } else {
+    // SSR fallback (unlikely for WS)
+    wsUrl = process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'ws://localhost:8080/ws';
+  }
+  console.log('Native WebSocket URL:', wsUrl);  // Debug: Confirm wss:// in prod console
+
+  // Native WebSocket factory (no SockJS)
+  const webSocketFactory = () => new WebSocket(wsUrl);
+
   client = new Client({
-    webSocketFactory: () => new SockJS(wsUrl),
+    webSocketFactory,  // Native WS here
     connectHeaders: {
-      Authorization: `Bearer ${localStorage.getItem("jwt") || ""}`,
+      Authorization: `Bearer ${localStorage.getItem('jwt') || ''}`,
     },
     reconnectDelay: 5000,
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
     onConnect: () => {
-      console.log("WebSocket connected for customer");
+      console.log('WebSocket connected for customer');
     },
     onDisconnect: () => {
-      console.log("WebSocket disconnected for customer");
+      console.log('WebSocket disconnected for customer');
     },
     onStompError: (frame) => {
-      console.error("WebSocket STOMP error:", frame);
+      console.error('WebSocket STOMP error:', frame);
     },
     onWebSocketClose: () => {
-      console.log("WebSocket closed, attempting to reconnect...");
+      console.log('WebSocket closed, attempting to reconnect...');
     },
     onWebSocketError: (error) => {
-      console.error("WebSocket error:", error);
+      console.error('WebSocket error:', error);
     },
   });
 
@@ -39,7 +52,6 @@ export const initializeWebSocket = (): Client => {
   return client;
 };
 
-// Rest unchanged (subscribeToTopic and disconnectWebSocket)
 export const subscribeToTopic = (
   client: Client,
   topic: string,
