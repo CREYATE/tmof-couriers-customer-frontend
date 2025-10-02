@@ -8,7 +8,7 @@ import { MapPin, Package, Truck, Home } from "lucide-react";
 import TrackParcelMap from "@/components/Maps/GoogleMapComponent";
 import { initializeWebSocket, subscribeToTopic, disconnectWebSocket } from "@/lib/websocket";
 import axios from "axios";
-import { Client } from "@stomp/stompjs";
+import { Client, IMessage } from "@stomp/stompjs";
 import TmofSpinner from "@/components/ui/TmofSpinner";
 
 interface OrderUpdateResponse {
@@ -24,28 +24,42 @@ function TrackParcelContent() {
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);  // Moved up
   const wsClientRef = useRef<Client | null>(null);
   const subscriptionRef = useRef<{ unsubscribe: () => void; id: string } | null>(null);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       if (trackingNumber) {
+        setLoading(true);
         await fetchOrderStatus(trackingNumber);
-        connectWebSocket(trackingNumber);
+        // WS init handled in separate effect
       } else {
-        setLoading(false); // Set loading to false if no tracking number
+        setLoading(false);
       }
     };
 
     fetchInitialData();
 
+    // Global cleanup on unmount
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
       }
       disconnectWebSocket();
+      wsClientRef.current = null;
     };
   }, [trackingNumber]);
+
+  // Separate effect for WS initialization (once on mount)
+  useEffect(() => {
+    wsClientRef.current = initializeWebSocket();
+
+    return () => {
+      disconnectWebSocket();
+      wsClientRef.current = null;
+    };
+  }, []);
 
   const fetchOrderStatus = async (tracking: string) => {
     try {
@@ -75,49 +89,54 @@ function TrackParcelContent() {
     }
   };
 
-  const connectWebSocket = (tracking: string) => {
-    const jwt = localStorage.getItem("jwt");
-    if (!jwt) {
-      setError("Authentication required for real-time updates. Please log in.");
-      return;
+  // Effect for subscribing when trackingNumber or status changes
+  useEffect(() => {
+    if (!trackingNumber || !wsClientRef.current) return;
+
+    const client = wsClientRef.current;
+    const topic = `/topic/order/${trackingNumber}`;
+
+    // Unsubscribe previous if exists
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
     }
 
-    const client = initializeWebSocket();
-    wsClientRef.current = client;
-
-    const checkConnection = setInterval(() => {
-      if (client.connected) {
-        clearInterval(checkConnection);
-        subscriptionRef.current = subscribeToTopic(client, `/topic/order/${tracking}`, (message) => {
-          try {
-            const update: OrderUpdateResponse = JSON.parse(message.body);
-            setOrderStatus(update.status);
-            setCurrentLocation(update.currentLocation || null);
-            setError(null);
-            console.log("Real-time update:", update);
-            if (update.status === "DELIVERED") {
-              subscriptionRef.current?.unsubscribe();
-              disconnectWebSocket();
-              console.log("WebSocket disconnected due to DELIVERED status");
-            }
-          } catch (err) {
-            console.error("Error parsing WebSocket message:", err);
-            setError("Error receiving real-time update");
+    // Subscribe (handles connection if needed)
+    subscriptionRef.current = subscribeToTopic(client, topic, (message: IMessage) => {
+      try {
+        const update: OrderUpdateResponse = JSON.parse(message.body);
+        setOrderStatus(update.status);
+        setCurrentLocation(update.currentLocation || null);
+        setError(null);
+        console.log("Real-time update:", update);
+        if (update.status === "DELIVERED") {
+          if (subscriptionRef.current) {
+            subscriptionRef.current.unsubscribe();
           }
-        });
+          disconnectWebSocket();
+          console.log("WebSocket disconnected due to DELIVERED status");
+        }
+      } catch (err) {
+        console.error("Error parsing WebSocket message:", err);
+        setError("Error receiving real-time update");
       }
-    }, 100);
-  };
+    });
+
+    // Cleanup on unmount or tracking change
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+      }
+    };
+  }, [trackingNumber, orderStatus]);  // Re-subscribe if status changes (e.g., delivered)
 
   const handleTrack = () => {
     if (trackingNumber) {
       setLoading(true);
       setShowMap(true);
       fetchOrderStatus(trackingNumber);
-      connectWebSocket(trackingNumber);
     }
   };
-  const [loading, setLoading] = useState(true);
 
   return (
     <div className="min-h-screen">
@@ -215,7 +234,7 @@ function TrackParcelContent() {
                     {/* Step 2: Collected */}
                     <div className="flex flex-col items-center flex-1 relative z-10">
                       <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        ["COLLECTED", "IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-orange-500 shadow-lg" : "bg-gray-300"
+                        ["COLLECTED", "IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-orange-500 shadow-lg" : "bg-gray-300"
                       }`}>
                         <Package className="w-8 h-8 text-white" />
                       </div>
@@ -228,7 +247,7 @@ function TrackParcelContent() {
                     {/* Step 3: In Transit */}
                     <div className="flex flex-col items-center flex-1 relative z-10">
                       <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-blue-500 shadow-lg" : "bg-gray-300"
+                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-blue-500 shadow-lg" : "bg-gray-300"
                       }`}>
                         <Truck className="w-8 h-8 text-white" />
                       </div>
@@ -258,7 +277,7 @@ function TrackParcelContent() {
                       }`}></div>
                       <div className="w-16"></div> {/* Space for circle */}
                       <div className={`h-1 flex-1 transition-all duration-300 ${
-                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-green-500" : "bg-gray-300"
+                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-green-500" : "bg-gray-300"
                       }`}></div>
                       <div className="w-16"></div> {/* Space for circle */}
                       <div className={`h-1 flex-1 transition-all duration-300 ${
@@ -293,12 +312,12 @@ function TrackParcelContent() {
                   <div className="flex items-start space-x-4">
                     <div className="flex flex-col items-center">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        ["COLLECTED", "IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-orange-500 shadow-lg" : "bg-gray-300"
+                        ["COLLECTED", "IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-orange-500 shadow-lg" : "bg-gray-300"
                       }`}>
                         <Package className="w-6 h-6 text-white" />
                       </div>
                       <div className={`w-1 h-12 transition-all duration-300 ${
-                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-green-500" : "bg-gray-300"
+                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-green-500" : "bg-gray-300"
                       }`}></div>
                     </div>
                     <div className="flex-1 pb-8">
@@ -311,7 +330,7 @@ function TrackParcelContent() {
                   <div className="flex items-start space-x-4">
                     <div className="flex flex-col items-center">
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus) ? "bg-blue-500 shadow-lg" : "bg-gray-300"
+                        ["IN_TRANSIT", "DELIVERED"].includes(orderStatus || "") ? "bg-blue-500 shadow-lg" : "bg-gray-300"
                       }`}>
                         <Truck className="w-6 h-6 text-white" />
                       </div>

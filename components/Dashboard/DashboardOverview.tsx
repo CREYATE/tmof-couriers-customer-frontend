@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import TmofSpinner from "@/components/ui/TmofSpinner";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
+// Remove: import SockJS from "sockjs-client";  // No longer needed
 import toast, { Toaster } from "react-hot-toast";
+// Add: Import your WS helpers
+import { initializeWebSocket, subscribeToTopic, disconnectWebSocket, Client } from "@/lib/websocket";
 
 interface Order {
   id: number;
@@ -57,7 +58,10 @@ const DashboardOverview: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [shipmentsLoading, setShipmentsLoading] = useState(false);
+  // Change: Use ref for the shared client from your helper
   const stompClientRef = useRef<Client | null>(null);
+  // Add: Track subscriptions for cleanup
+  const subscriptionsRef = useRef<Map<string, any>>(new Map());  // Keyed by trackingNumber
 
   const handleWalletLearnMore = () => {
     setWalletLoading(true);
@@ -140,53 +144,61 @@ const DashboardOverview: React.FC = () => {
 
     fetchOrders();
 
+    // Cleanup WS on unmount
     return () => {
       if (stompClientRef.current) {
-        stompClientRef.current.deactivate();
-        console.log("WebSocket disconnected");
+        disconnectWebSocket();  // Use your helper
+        stompClientRef.current = null;
       }
+      subscriptionsRef.current.clear();
     };
   }, []);
 
+  // New useEffect: Initialize WS once on mount, subscribe when orders load
   useEffect(() => {
-    if (stompClientRef.current && stompClientRef.current.connected) {
-      stompClientRef.current.deactivate();
-    }
-    const socket = new SockJS("http://localhost:8080/ws");
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("WebSocket reconnected for new orders");
-        orders.forEach((order) => {
-          client.subscribe(`/topic/order/${order.trackingNumber}`, (message) => {
-            const update = JSON.parse(message.body);
-            console.log("WebSocket update received:", update);
-            setOrders((prevOrders) =>
-              prevOrders.map((o) =>
-                o.trackingNumber === order.trackingNumber ? { ...o, status: update.status } : o
-              )
-            );
-          });
-        });
-      },
-      onStompError: (frame) => {
-        console.error("WebSocket error:", frame);
-      },
-      onWebSocketClose: () => {
-        console.log("WebSocket disconnected");
-      },
-    });
-    client.activate();
-    stompClientRef.current = client;
+    // Initialize client (handles auth via localStorage in your helper)
+    stompClientRef.current = initializeWebSocket();
 
+    // Cleanup function for this effect
     return () => {
       if (stompClientRef.current) {
-        stompClientRef.current.deactivate();
-        console.log("WebSocket disconnected");
+        disconnectWebSocket();
+        stompClientRef.current = null;
       }
     };
-  }, [orders.length]);
+  }, []);  // Run once on mount, not dependent on orders
+
+  // New useEffect: Subscribe to order updates when orders change
+  useEffect(() => {
+    if (!stompClientRef.current || orders.length === 0) return;
+
+    const client = stompClientRef.current;
+
+    // Unsubscribe from old ones first
+    subscriptionsRef.current.forEach((sub) => sub.unsubscribe());
+    subscriptionsRef.current.clear();
+
+    // Subscribe to each order's topic
+    orders.forEach((order) => {
+      const topic = `/topic/order/${order.trackingNumber}`;
+      const subscription = subscribeToTopic(client, topic, (message) => {
+        const update = JSON.parse(message.body);
+        console.log("WebSocket update received:", update);
+        setOrders((prevOrders) =>
+          prevOrders.map((o) =>
+            o.trackingNumber === order.trackingNumber ? { ...o, status: update.status } : o
+          )
+        );
+      });
+      subscriptionsRef.current.set(order.trackingNumber, subscription);
+    });
+
+    // Cleanup on unmount or orders change
+    return () => {
+      subscriptionsRef.current.forEach((sub) => sub.unsubscribe());
+      subscriptionsRef.current.clear();
+    };
+  }, [orders]);  // Depend on orders array (stable reference via useState)
 
   const shipmentStats = getShipmentStats(orders);
   const totalOrders = orders.length;

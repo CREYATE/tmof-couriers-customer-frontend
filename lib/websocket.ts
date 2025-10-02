@@ -1,5 +1,8 @@
 import { Client, IMessage } from "@stomp/stompjs";
 
+// Re-export Client type for use in other components
+export type { Client } from "@stomp/stompjs";
+
 let client: Client | null = null;
 
 export const initializeWebSocket = (): Client => {
