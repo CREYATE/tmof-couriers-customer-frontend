@@ -22,7 +22,7 @@ export default function LoginForm() {
         e.preventDefault();
         setIsLoading(true);
         setError('');
-        console.log('Login attempt with:', { emailOrUsername: email, password });
+        // console.log('Login attempt with:', { emailOrUsername: email, password });
 
         try {
             const response = await axios.post('/api/auth', {
@@ -30,12 +30,12 @@ export default function LoginForm() {
                 emailOrUsername: email,
                 password,
             });
-            console.log('Login response:', response.data);
+            // console.log('Login response:', response.data);
             const { token } = response.data;
             localStorage.setItem('jwt', token);
             router.push('/dashboard');
         } catch (err: any) {
-            console.error('Login error:', err.response?.data);
+            // console.error('Login error:', err.response?.data);
             const errorMessage = err.response?.data?.error || 'Login failed. Please check your email and password.';
             setError(errorMessage);
             if (errorMessage.includes('This account uses Google Sign-In')) {
@@ -51,19 +51,19 @@ export default function LoginForm() {
     const handleGoogleSuccess = async (credentialResponse: any) => {
         setIsLoading(true);
         setError('');
-        console.log('Google Sign-In token:', credentialResponse.credential);
+        // console.log('Google Sign-In token:', credentialResponse.credential);
 
         try {
             const response = await axios.post('/api/auth', {
                 path: 'google-signin',
                 token: credentialResponse.credential,
             });
-            console.log('Google Sign-In response:', response.data);
+            // console.log('Google Sign-In response:', response.data);
             const { token } = response.data;
             localStorage.setItem('jwt', token);
             router.push('/dashboard');
         } catch (err: any) {
-            console.error('Google Sign-In error:', err.response?.data);
+            // console.error('Google Sign-In error:', err.response?.data);
             setError(err.response?.data?.error || 'Google Sign-In failed. Please try again.');
         } finally {
             setIsLoading(false);
@@ -71,7 +71,7 @@ export default function LoginForm() {
     };
 
     const handleGoogleError = () => {
-        console.error('Google Sign-In failed');
+        // console.error('Google Sign-In failed');
         setError('Google Sign-In failed. Please try again or contact support.');
         setIsLoading(false);
     };

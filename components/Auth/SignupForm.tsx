@@ -26,7 +26,7 @@ export default function SignupForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    console.log('Signup attempt with:', { name, surname, email, password, confirmPassword });
+    // console.log('Signup attempt with:', { name, surname, email, password, confirmPassword });
 
     try {
       await axios.post('/api/auth', {
@@ -37,10 +37,10 @@ export default function SignupForm() {
         password,
         confirmPassword,
       });
-      console.log('Signup successful, redirecting to login');
+      // console.log('Signup successful, redirecting to login');
       router.push('/login');
     } catch (err: any) {
-      console.error('Signup error:', err.response?.data);
+      // console.error('Signup error:', err.response?.data);
       setError(err.response?.data?.error || 'Signup failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -50,19 +50,19 @@ export default function SignupForm() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setError('');
-    console.log('Google Sign-In token:', credentialResponse.credential);
+    // console.log('Google Sign-In token:', credentialResponse.credential);
 
     try {
       const response = await axios.post('/api/auth', {
         path: 'google-signin',
         token: credentialResponse.credential,
       });
-      console.log('Google Sign-In response:', response.data);
+      // console.log('Google Sign-In response:', response.data);
       const { token } = response.data;
       localStorage.setItem('jwt', token);
       router.push('/dashboard');
     } catch (err: any) {
-      console.error('Google Sign-In error:', err.response?.data);
+      // console.error('Google Sign-In error:', err.response?.data);
       setError(err.response?.data?.error || 'Google Sign-In failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -70,7 +70,7 @@ export default function SignupForm() {
   };
 
   const handleGoogleError = () => {
-    console.error('Google Sign-In failed');
+    // console.error('Google Sign-In failed');
     setError('Google Sign-In failed. Please try again.');
     setIsLoading(false);
   };
@@ -171,51 +171,6 @@ export default function SignupForm() {
               className="absolute right-3 top-3 sm:top-2.5 text-gray-400 hover:text-gray-600 touch-manipulation p-1"
             >
               {showConfirmPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
-            </button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              className="pl-10 pr-10"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <Input
-              id="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              className="pl-10 pr-10"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-            >
-              {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
         </div>
