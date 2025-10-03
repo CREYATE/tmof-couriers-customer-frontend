@@ -124,8 +124,18 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
         useWallet: false,
       };
 
-      console.log('Processing Paystack payment:', mappedOrderData);
-      const initResponse = await axios.post('/api/orders/initialize-payment', mappedOrderData, {
+      // Store order data for payment callback
+      sessionStorage.setItem('pendingOrderData', JSON.stringify(mappedOrderData));
+
+      // Add callback URLs to the request
+      const paymentData = {
+        ...mappedOrderData,
+        callbackUrl: `${window.location.origin}/payment/callback`,
+        cancelUrl: `${window.location.origin}/payment/callback?cancelled=true`,
+      };
+
+      console.log('Processing Paystack payment:', paymentData);
+      const initResponse = await axios.post('/api/orders/initialize-payment', paymentData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
       });
 
@@ -143,6 +153,8 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
       console.error('Payment init error:', error.response?.data || error);
       setError(errorMessage);
       setRedirecting(false);
+      // Clear stored data on error
+      sessionStorage.removeItem('pendingOrderData');
     }
   };
 

@@ -134,16 +134,20 @@ export default function LoginForm() {
                         <span className="mx-3 text-xs sm:text-sm text-gray-400">or continue with</span>
                         <div className="flex-grow h-px bg-gray-200" />
                     </div>
-                    <div className="w-full">
-                        <GoogleLogin
-                            onSuccess={handleGoogleSuccess}
-                            onError={handleGoogleError}
-                            theme="outline"
-                            size="large"
-                            text="signin_with"
-                            shape="rectangular"
-                            width="100%"
-                        />
+                    <div className="w-full flex justify-center">
+                        <div className="w-full max-w-sm">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={handleGoogleError}
+                                theme="outline"
+                                size="large"
+                                text="signin_with"
+                                shape="rectangular"
+                                width="100%"
+                                useOneTap={false}
+                                auto_select={false}
+                            />
+                        </div>
                     </div>
                     <div className="text-center text-sm sm:text-base text-gray-600">
                         Don't have an account?{' '}
