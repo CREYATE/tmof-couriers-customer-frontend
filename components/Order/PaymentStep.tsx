@@ -122,6 +122,9 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
         preferredTime: orderData.preferredTime,
         includeTrailer: orderData.includeTrailer || false,
         useWallet: false,
+        // Add callback URL for Paystack auto-redirect
+        callbackUrl: `${window.location.origin}/payment/callback`,
+        cancelUrl: `${window.location.origin}/payment/callback?cancelled=true`,
       };
 
       // console.log('Processing Paystack payment:', mappedOrderData);
