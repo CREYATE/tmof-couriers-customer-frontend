@@ -122,9 +122,6 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
         preferredTime: orderData.preferredTime,
         includeTrailer: orderData.includeTrailer || false,
         useWallet: false,
-        // Add callback URL for Paystack auto-redirect
-        callbackUrl: `${window.location.origin}/payment/callback`,
-        cancelUrl: `${window.location.origin}/payment/callback?cancelled=true`,
       };
 
       // console.log('Processing Paystack payment:', mappedOrderData);
@@ -138,8 +135,12 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
 
       const { authorizationUrl, reference } = initResponse.data;
 
-      // console.log('Redirecting to Paystack:', authorizationUrl);
-      window.location.href = authorizationUrl;
+      // Add callback URL as a parameter to the Paystack URL
+      const callbackUrl = `${window.location.origin}/payment/callback`;
+      const urlWithCallback = `${authorizationUrl}&callback_url=${encodeURIComponent(callbackUrl)}`;
+
+      // console.log('Redirecting to Paystack:', urlWithCallback);
+      window.location.href = urlWithCallback;
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Failed to initialize payment.';

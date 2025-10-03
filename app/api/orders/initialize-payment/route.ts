@@ -4,19 +4,8 @@ import axios from 'axios';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // Extract callback URLs if provided
-    const { callbackUrl, cancelUrl, ...orderData } = body;
-    
-    // Add callback URLs to the request if they exist
-    const backendRequest = {
-      ...orderData,
-      ...(callbackUrl && { callbackUrl }),
-      ...(cancelUrl && { cancelUrl })
-    };
-    
-    // console.log('Initialize-payment route - Received request:', backendRequest);
-    const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/initialize-payment`, backendRequest, {
+    // console.log('Initialize-payment route - Received request:', body);
+    const response = await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/orders/initialize-payment`, body, {
       headers: {
         Authorization: request.headers.get('Authorization') || '',
         'Content-Type': 'application/json',
