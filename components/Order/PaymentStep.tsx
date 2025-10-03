@@ -124,18 +124,8 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
         useWallet: false,
       };
 
-      // Store order data for payment callback
-      sessionStorage.setItem('pendingOrderData', JSON.stringify(mappedOrderData));
-
-      // Add callback URLs to the request
-      const paymentData = {
-        ...mappedOrderData,
-        callbackUrl: `${window.location.origin}/payment/callback`,
-        cancelUrl: `${window.location.origin}/payment/callback?cancelled=true`,
-      };
-
-      console.log('Processing Paystack payment:', paymentData);
-      const initResponse = await axios.post('/api/orders/initialize-payment', paymentData, {
+      // console.log('Processing Paystack payment:', mappedOrderData);
+      const initResponse = await axios.post('/api/orders/initialize-payment', mappedOrderData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
       });
 
@@ -145,16 +135,69 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
 
       const { authorizationUrl, reference } = initResponse.data;
 
-      console.log('Redirecting to Paystack:', authorizationUrl);
-      window.location.href = authorizationUrl;
+      // Store the reference for later verification
+      sessionStorage.setItem('paymentReference', reference);
+      sessionStorage.setItem('pendingOrderData', JSON.stringify(mappedOrderData));
+
+      // console.log('Redirecting to Paystack:', authorizationUrl);
+      
+      // Open Paystack in a popup window
+      const popup = window.open(authorizationUrl, 'paystack', 'width=500,height=600,scrollbars=yes,resizable=yes');
+      
+      // Monitor the popup
+      const pollTimer = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(pollTimer);
+          setRedirecting(false);
+          // When popup closes, verify payment
+          handlePaymentVerification(reference, mappedOrderData);
+        }
+      }, 1000);
+
+      // Timeout after 10 minutes
+      setTimeout(() => {
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        clearInterval(pollTimer);
+        setRedirecting(false);
+        setError('Payment timeout. Please try again.');
+      }, 600000);
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || 'Failed to initialize payment.';
-      console.error('Payment init error:', error.response?.data || error);
+      // console.error('Payment init error:', error.response?.data || error);
       setError(errorMessage);
       setRedirecting(false);
-      // Clear stored data on error
+    }
+  };
+
+  const handlePaymentVerification = async (reference: string, orderData: any) => {
+    try {
+      setRedirecting(true);
+      
+      const verifyResponse = await axios.post('/api/orders/verify-payment', {
+        paystackVerifyRequest: { reference },
+        orderRequest: orderData,
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` },
+      });
+
+      if (verifyResponse.data.error) {
+        throw new Error(verifyResponse.data.error);
+      }
+
+      // Clear stored data
+      sessionStorage.removeItem('paymentReference');
       sessionStorage.removeItem('pendingOrderData');
+
+      // Payment successful, proceed to confirmation
+      onNext(verifyResponse.data);
+
+    } catch (error: any) {
+      // console.error('Payment verification error:', error);
+      setError('Payment verification failed. Please contact support if you were charged.');
+      setRedirecting(false);
     }
   };
 
@@ -227,7 +270,7 @@ export default function PaymentStep({ orderData, onNext }: PaymentStepProps) {
           </div>
 
           <p className="text-xs text-gray-500 text-center mt-2">
-            You will be redirected to Paystack's secure payment gateway.
+            A secure payment window will open. Close it when payment is complete.
           </p>
         </div>
       </Card>
