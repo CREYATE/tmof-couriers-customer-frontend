@@ -209,7 +209,7 @@ const DashboardOverview: React.FC = () => {
       value: totalOrders,
       changeValue: "0%",
       changeDirection: "neutral" as const,
-      description: "vs yesterday",
+      // description: "vs yesterday",
       icon: <Package className="h-5 w-5 text-[#ffd215]" />,
     },
     {
@@ -217,7 +217,7 @@ const DashboardOverview: React.FC = () => {
       value: shipmentStats.awaiting_collection,
       changeValue: "0%",
       changeDirection: "neutral" as const,
-      description: "vs yesterday",
+      // description: "vs yesterday",
       icon: <Clock className="h-5 w-5 text-yellow-600" />,
     },
     {
@@ -225,7 +225,7 @@ const DashboardOverview: React.FC = () => {
       value: shipmentStats.in_transit,
       changeValue: "0%",
       changeDirection: "neutral" as const,
-      description: "vs yesterday",
+      // description: "vs yesterday",
       icon: <Truck className="h-5 w-5 text-blue-600" />,
     },
     {
@@ -233,7 +233,7 @@ const DashboardOverview: React.FC = () => {
       value: shipmentStats.delivered,
       changeValue: "0%",
       changeDirection: "neutral" as const,
-      description: "vs yesterday",
+      // description: "vs yesterday",
       icon: <Truck className="h-5 w-5 text-green-600" />,
     },
   ];

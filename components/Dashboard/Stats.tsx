@@ -6,7 +6,7 @@ interface Stat {
   value: string | number;
   changeValue: string;
   changeDirection: "up" | "down" | "neutral";
-  description: string;
+  // description: string;
   icon: React.ReactNode;
 }
 
@@ -21,7 +21,7 @@ const Stats = ({ stats }: { stats: Stat[] }) => (
               <div className="mb-3 p-3 rounded-full bg-[#ffd215]/10">{stat.icon}</div>
               <div className="text-sm font-medium text-gray-600 mb-1">{stat.title}</div>
               <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
-              <div className="text-xs text-gray-500">{stat.description}</div>
+              {/* <div className="text-xs text-gray-500">{stat.description}</div> */}
             </CardContent>
           </Card>
         ))}
@@ -36,7 +36,7 @@ const Stats = ({ stats }: { stats: Stat[] }) => (
             <div className="mb-3 p-3 rounded-full bg-[#ffd215]/10">{stat.icon}</div>
             <div className="text-sm font-medium text-gray-600 mb-1">{stat.title}</div>
             <div className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</div>
-            <div className="text-xs text-gray-500">{stat.description}</div>
+            {/* <div className="text-xs text-gray-500">{stat.description}</div> */}
           </CardContent>
         </Card>
       ))}
